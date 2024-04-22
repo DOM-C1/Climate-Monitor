@@ -1,0 +1,15 @@
+on:
+  pull_request:
+    branches:
+    - main
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: "Code Linting"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@5
+      - uses: actions/checkout@v4
+      - run: pip install pylint
+      - run: pylint *.py
