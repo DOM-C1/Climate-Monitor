@@ -12,4 +12,4 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
       - run: pip3 install pylint
-      - run: pylint --fail-under=8.5 *.py
+      - run: pylint --fail-under=8.5 */*.py
