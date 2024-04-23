@@ -1,4 +1,4 @@
-data = ['http://environment.data.gov.uk/flood-monitoring/id/floods']
+data = ['https://environment.data.gov.uk/water-quality/data/measurement']
 import requests
 def fetch_data_with_authentication(url):
     headers = {
