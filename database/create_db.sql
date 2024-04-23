@@ -1,15 +1,5 @@
 
 
-DROP TABLE country;
-DROP TABLE county;
-DROP TABLE weather_code;
-DROP TABLE location;
-DROP TABLE weather_report;
-DROP TABLE user;
-DROP TABLE forecast;
-DROP TABLE flood_warnings;
-DROP TABLE alert_type;
-DROP TABLE alert;
 DROP TABLE cloud;
 DROP TABLE temperature;
 DROP TABLE sun;
@@ -18,6 +8,58 @@ DROP TABLE wind;
 DROP TABLE snow;
 DROP TABLE rain;
 DROP TABLE air;
+DROP TABLE alert;
+DROP TABLE alert_type;
+DROP TABLE flood_warnings;
+DROP TABLE forecast;
+DROP TABLE user_details;
+DROP TABLE weather_report;
+DROP TABLE location;
+DROP TABLE weather_code;
+DROP TABLE county;
+DROP TABLE country;
+
+
+
+CREATE TABLE country(
+    country_id SMALLINT NOT NULL,
+    name VARCHAR(30) NOT NULL,
+    PRIMARY KEY(country_id)
+);
+
+CREATE TABLE county(
+    county_id SMALLINT NOT NULL,
+    name VARCHAR(30) NOT NULL,
+    country_id SMALLINT NOT NULL,
+    PRIMARY KEY(county_id),
+    CONSTRAINT fk_country
+        FOREIGN KEY(country_id) 
+            REFERENCES country(country_id)
+);
+
+CREATE TABLE alert_type(
+    alert_type_id BIGINT NOT NULL,
+    name VARCHAR(30) NOT NULL,
+    PRIMARY KEY(alert_type_id)
+);
+
+CREATE TABLE weather_code(
+    weather_code_id SMALLINT NOT NULL,
+    description VARCHAR(30) NOT NULL,
+    PRIMARY KEY(weather_code_id)
+);
+
+CREATE TABLE location(
+    loc_id SMALLINT NOT NULL,
+    longitude VARCHAR(10) NOT NULL,
+    latitude VARCHAR(10) NOT NULL,
+    loc_name VARCHAR(60) NOT NULL,
+    county_id SMALLINT NOT NULL,
+    PRIMARY KEY(loc_id),
+    CONSTRAINT fk_county
+        FOREIGN KEY(county_id) 
+            REFERENCES county(county_id)
+);
 
 CREATE TABLE weather_report(
     weather_report_id BIGINT NOT NULL UNIQUE GENERATED ALWAYS AS IDENTITY,
@@ -28,6 +70,56 @@ CREATE TABLE weather_report(
         FOREIGN KEY(loc_id) 
             REFERENCES location(loc_id)
 );
+
+CREATE TABLE user_details(
+    user_id SMALLINT NOT NULL,
+    email VARCHAR(30) NOT NULL,
+    loc_id SMALLINT NOT NULL,
+    name VARCHAR(40) NOT NULL,
+    CONSTRAINT fk_loc
+        FOREIGN KEY(loc_id) 
+            REFERENCES location(loc_id)
+);
+
+CREATE TABLE forecast(
+    forecast_id BIGINT NOT NULL,
+    forecast_timestamp TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
+    weather_report_id BIGINT NOT NULL,
+    weather_code_id SMALLINT NOT NULL,
+    PRIMARY KEY(forecast_id),
+    CONSTRAINT fk_weather_report
+        FOREIGN KEY(weather_report_id) 
+            REFERENCES weather_report(weather_report_id),
+    CONSTRAINT fk_weather_code
+        FOREIGN KEY(weather_code_id) 
+            REFERENCES weather_code(weather_code_id)
+);
+
+CREATE TABLE flood_warnings(
+    flood_id BIGINT NOT NULL,
+    severity_level SMALLINT NULL,
+    time_raised TIMESTAMP(0) WITHOUT TIME ZONE NULL,
+    forecast_id BIGINT NOT NULL,
+    PRIMARY KEY(flood_id),
+    CONSTRAINT fk_forecast
+        FOREIGN KEY(forecast_id) 
+            REFERENCES forecast(forecast_id)
+);
+
+
+CREATE TABLE alert(
+    alert_id BIGINT NOT NULL,
+    alert_type_id SMALLINT NOT NULL,
+    forecast_id BIGINT NOT NULL,
+    PRIMARY KEY(alert_id),
+    CONSTRAINT fk_forecast
+        FOREIGN KEY(forecast_id) 
+            REFERENCES forecast(forecast_id),
+    CONSTRAINT fk_alert_type
+        FOREIGN KEY(alert_type_id) 
+            REFERENCES alert_type(alert_type_id)
+);
+
 
 
 CREATE TABLE temperature(
@@ -52,20 +144,6 @@ CREATE TABLE cloud(
 );
 
 
-CREATE TABLE alert_type(
-    alert_type_id BIGINT NOT NULL,
-    name VARCHAR(30) NOT NULL,
-    PRIMARY KEY(alert_type_id),
-);
-
-
-CREATE TABLE weather_code(
-    weather_code_id SMALLINT NOT NULL,
-    description VARCHAR(30) NOT NULL,
-    PRIMARY KEY(weather_code_id)
-);
-
-
 CREATE TABLE sun(
     sun_id BIGINT NOT NULL,
     uv_index DOUBLE PRECISION NOT NULL,
@@ -77,17 +155,6 @@ CREATE TABLE sun(
 );
 
 
-CREATE TABLE flood_warnings(
-    flood_id BIGINT NOT NULL,
-    severity_level SMALLINT NULL,
-    time_raised TIMESTAMP(0) WITHOUT TIME ZONE NULL,
-    forecast_id BIGINT NOT NULL,
-    PRIMARY KEY(flood_id),
-    CONSTRAINT fk_forecast
-        FOREIGN KEY(forecast_id) 
-            REFERENCES forecast(forecast_id)
-);
-
 CREATE TABLE lightning_alert(
     lightning_alert BIGINT NOT NULL,
     lightning_potential SMALLINT NOT NULL,
@@ -98,18 +165,6 @@ CREATE TABLE lightning_alert(
             REFERENCES forecast(forecast_id)
 );
 
-CREATE TABLE alert(
-    alert_id BIGINT NOT NULL,
-    alert_type_id SMALLINT NOT NULL,
-    forecast_id BIGINT NOT NULL,
-    PRIMARY KEY(alert_id),
-    CONSTRAINT fk_forecast
-        FOREIGN KEY(forecast_id) 
-            REFERENCES forecast(forecast_id),
-    CONSTRAINT fk_alert_type
-        FOREIGN KEY(alert_type_id) 
-            REFERENCES alert(alert_type_id)
-);
 
 CREATE TABLE air(
     air_id BIGINT NOT NULL,
@@ -123,20 +178,6 @@ CREATE TABLE air(
             REFERENCES forecast(forecast_id)
 );
 
-
-CREATE TABLE forecast(
-    forecast_id BIGINT NOT NULL,
-    forecast_timestamp TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
-    weather_report_id BIGINT NOT NULL,
-    weather_code_id SMALLINT NOT NULL,
-    PRIMARY KEY(forecast_id),
-    CONSTRAINT fk_weather_report
-        FOREIGN KEY(weather_report_id) 
-            REFERENCES weather_report(weather_report_id),
-    CONSTRAINT fk_weather_code
-        FOREIGN KEY(weather_code_id) 
-            REFERENCES weather_code(weather_code_id)
-);
 
 CREATE TABLE snow(
     snow_id BIGINT NOT NULL,
@@ -174,41 +215,5 @@ CREATE TABLE wind(
             REFERENCES forecast(forecast_id)
 );
 
-CREATE TABLE location(
-    loc_id SMALLINT NOT NULL,
-    longitude VARCHAR(10) NOT NULL,
-    latitude VARCHAR(10) NOT NULL,
-    loc_name VARCHAR(60) NOT NULL,
-    county_id SMALLINT NOT NULL,
-    PRIMARY KEY(loc_id),
-    CONSTRAINT fk_county
-        FOREIGN KEY(county_id) 
-            REFERENCES county(county_id)
-);
 
 
-CREATE TABLE county(
-    county_id SMALLINT NOT NULL,
-    name VARCHAR(30) NOT NULL,
-    country_id SMALLINT NOT NULL,
-    PRIMARY KEY(county_id),
-    CONSTRAINT fk_country
-        FOREIGN KEY(country_id) 
-            REFERENCES country(country_id)
-);
-
-CREATE TABLE country(
-    country_id SMALLINT NOT NULL,
-    name VARCHAR(30) NOT NULL,
-    PRIMARY KEY(country_id)
-);
-
-CREATE TABLE user(
-    user_id SMALLINT NOT NULL,
-    email VARCHAR(30) NOT NULL,
-    loc_id SMALLINT NOT NULL,
-    name VARCHAR(40) NOT NULL,
-    CONSTRAINT fk_loc
-        FOREIGN KEY(loc_id) 
-            REFERENCES loc(loc_id)
-);
