@@ -16,8 +16,8 @@ def get_db_connection(config):
     )
 
 
-def get_metadata(filename):
-    with open('metadata/' + filename) as f:
+def get_metadata(filepath):
+    with open(filepath) as f:
         return [x.strip() for x in f.readlines()]
 
 
@@ -25,7 +25,7 @@ def insert_countries(conn):
     """Insert country metadata into database"""
     with conn.cursor() as cur:
         cur.executemany(
-            "INSERT INTO country (name) VALUES (%s)", [[data] for data in get_metadata('countries.txt')])
+            "INSERT INTO country (name) VALUES (%s)", [[data] for data in get_metadata('metadata/countries.txt')])
         conn.commit()
 
 
@@ -33,7 +33,7 @@ def insert_counties(conn):
     """Insert county metadata into database"""
     with conn.cursor() as cur:
         cur.executemany(
-            "INSERT INTO county (name, country_id) VALUES (%s, %s)", [[data.split(', ')[0], int(data.split(', ')[1])] for data in get_metadata('counties.txt')])
+            "INSERT INTO county (name, country_id) VALUES (%s, %s)", [[data.split(', ')[0], int(data.split(', ')[1])] for data in get_metadata('metadata/counties.txt')])
         conn.commit()
 
 
@@ -41,7 +41,7 @@ def insert_locations(conn):
     """Insert location metadata into database"""
     with conn.cursor() as cur:
         cur.executemany(
-            "INSERT INTO location (latitude, longitude, location_name, county_id) VALUES (%s, %s, %s, %s)", [[float(data.split(', ')[0]), float(data.split(', ')[1]), data.split(', ')[2], int(data.split(', ')[3])] for data in get_metadata('locations.txt')])
+            "INSERT INTO location (latitude, longitude, location_name, county_id) VALUES (%s, %s, %s, %s)", [[float(data.split(', ')[0]), float(data.split(', ')[1]), data.split(', ')[2], int(data.split(', ')[3])] for data in get_metadata('metadata/locations.txt')])
         conn.commit()
 
 
@@ -57,7 +57,7 @@ def insert_weather_codes(conn):
     """Insert weather code metadata into database"""
     with conn.cursor() as cur:
         cur.executemany(
-            "INSERT INTO weather_code (weather_code_id, description) VALUES (%s, %s)", [[int(data.split(', ')[0]), data.split(', ')[1]] for data in get_metadata('weather_codes.txt')])
+            "INSERT INTO weather_code (weather_code_id, description) VALUES (%s, %s)", [[int(data.split(', ')[0]), data.split(', ')[1]] for data in get_metadata('metadata/weather_codes.txt')])
         conn.commit()
 
 
