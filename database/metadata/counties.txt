@@ -1,0 +1,19 @@
+Greater London, 1
+Greater Manchester, 1
+West Midlands Combined Authority, 1
+West Yorkshire, 1
+Glasgow City, 3
+Hampshire, 1
+Liverpool City Region, 1
+North of Tyne, 1
+Nottinghamshire, 1
+South Yorkshire, 1
+City of Bristol, 1
+County Antrim, 2
+East Sussex, 1
+Leicestershire, 1
+City of Edinburgh, 3
+Bournemouth, 1
+Cardiff, 4
+Tees Valley, 1
+Stoke-on-Trent, 1
