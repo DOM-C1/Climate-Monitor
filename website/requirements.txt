@@ -1,4 +1,2 @@
 Flask
-Flask-WTF
-WTForms
-email_validator
+psycopg2-binary

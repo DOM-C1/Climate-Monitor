@@ -11,8 +11,6 @@ def fetch_data_with_authentication(url):
         return f"Failed to retrieve data: {response.status_code}"
 
 
-api_key = "your_api_key_here"
-
 
 data = fetch_data_with_authentication(data[0])
 for item in data['items']:
