@@ -1,8 +1,14 @@
-from insert_metadata import get_metadata, insert_countries, insert_counties, insert_locations, insert_alert_types
+"""A file to test the functions in insert_metadata.py"""
+
 import os
+
+from insert_metadata import get_metadata, insert_countries, \
+    insert_counties, insert_locations, insert_alert_types
 
 
 def test_get_location_metadata():
+    """A test for 'get_metadata' which tests that lines in
+    'locations.txt' is formatted correctly."""
     files = os.listdir()
     print(files)
     if 'metadata' not in files and 'database' in files:
