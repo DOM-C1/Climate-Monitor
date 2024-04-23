@@ -10,9 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - run: find . -name "requirements.txt" | xargs -I {} echo "-r" {} >> all-requirements.txt
-      - run: pip install -r all-requirements.txt
+      - run: pip3 install -r all-requirements.txt
+      - run: pip3 install pytest
       - run: pytest
