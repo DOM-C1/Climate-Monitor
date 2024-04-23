@@ -14,6 +14,6 @@ jobs:
         with:
           python-version: '3.11'
       - run: find . -name "requirements.txt" | xargs -I {} echo "-r" {} >> all-requirements.txt
-      - run: pip install -r all-requirements.txt
-      - run: pip install pytest
+      - run: pip3 install -r all-requirements.txt
+      - run: pip3 install pytest
       - run: pytest
