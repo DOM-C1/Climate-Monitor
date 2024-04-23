@@ -45,11 +45,11 @@ def insert_locations(conn):
         conn.commit()
 
 
-def insert_emergency_types(conn):
-    """Insert emergency types metadata into database"""
+def insert_alert_types(conn):
+    """Insert alert types metadata into database"""
     with conn.cursor() as cur:
         cur.executemany(
-            "INSERT INTO emergency_type (name) VALUES (%s)", [[name] for name in get_metadata('emergencies.txt')])
+            "INSERT INTO alert_type (name) VALUES (%s)", [[name] for name in get_metadata('emergencies.txt')])
         conn.commit()
 
 
@@ -64,7 +64,7 @@ def insert_weather_codes(conn):
 if __name__ == "__main__":
     load_dotenv()
     with get_db_connection(ENV) as connection:
-        insert_emergency_types(connection)
+        insert_alert_types(connection)
         insert_weather_codes(connection)
         insert_countries(connection)
         insert_counties(connection)
