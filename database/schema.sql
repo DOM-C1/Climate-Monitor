@@ -82,7 +82,6 @@ CREATE TABLE user_details(
 CREATE TABLE forecast(
     forecast_id BIGINT NOT NULL UNIQUE GENERATED ALWAYS AS IDENTITY,
     forecast_timestamp TIMESTAMP NOT NULL,
-    air_quality SMALLINT NOT NULL,
     visibility SMALLINT NOT NULL,
     humidity SMALLINT NOT NULL,
     precipitation FLOAT NOT NULL,
