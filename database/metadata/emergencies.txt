@@ -4,6 +4,5 @@ Ice
 Lightning
 Snowfall
 Visibility
-Air quality
 UV-index
 Rain

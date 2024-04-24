@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 
 def get_db_connection(config):
-    """Connect to the database"""
+    """Connect to the database."""
     return psycopg2.connect(
         user=config["DB_USER"],
         password=config["DB_PASSWORD"],
@@ -25,7 +25,7 @@ def get_metadata(filepath):
 
 
 def insert_countries(conn):
-    """Insert country metadata into database"""
+    """Insert country metadata into database."""
     with conn.cursor() as cur:
         cur.executemany(
             "INSERT INTO country (name) VALUES (%s)",
@@ -34,7 +34,7 @@ def insert_countries(conn):
 
 
 def insert_counties(conn):
-    """Insert county metadata into database"""
+    """Insert county metadata into database."""
     with conn.cursor() as cur:
         cur.executemany(
             "INSERT INTO county (name, country_id) VALUES (%s, %s)",
@@ -44,7 +44,7 @@ def insert_counties(conn):
 
 
 def insert_locations(conn):
-    """Insert location metadata into database"""
+    """Insert location metadata into database."""
     with conn.cursor() as cur:
         cur.executemany(
             "INSERT INTO location (latitude, longitude, loc_name, county_id) \
@@ -57,7 +57,7 @@ def insert_locations(conn):
 
 
 def insert_alert_types(conn):
-    """Insert alert types metadata into database"""
+    """Insert alert types metadata into database."""
     with conn.cursor() as cur:
         cur.executemany(
             "INSERT INTO alert_type (name) VALUES (%s)",
@@ -66,7 +66,7 @@ def insert_alert_types(conn):
 
 
 def insert_severities(conn):
-    """Insert alert types metadata into database"""
+    """Insert alert types metadata into database."""
     with conn.cursor() as cur:
         cur.executemany(
             "INSERT INTO severity_level (severity_level_id, severity_level) VALUES (%s, %s)",
@@ -75,7 +75,7 @@ def insert_severities(conn):
 
 
 def insert_weather_codes(conn):
-    """Insert weather code metadata into database"""
+    """Insert weather code metadata into database."""
     with conn.cursor() as cur:
         cur.executemany(
             "INSERT INTO weather_code (weather_code_id, description) VALUES (%s, %s)",
