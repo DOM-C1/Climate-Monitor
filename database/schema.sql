@@ -1,5 +1,3 @@
-
-
 DROP TABLE air_quality;
 DROP TABLE user_location_assignment;
 DROP TABLE weather_alert;
@@ -13,8 +11,6 @@ DROP TABLE alert_type;
 DROP TABLE severity_level;
 DROP TABLE county;
 DROP TABLE country;
-
-
 
 CREATE TABLE country(
     country_id SMALLINT NOT NULL UNIQUE GENERATED ALWAYS AS IDENTITY,
@@ -121,7 +117,6 @@ CREATE TABLE flood_warnings(
             REFERENCES severity_level(severity_level_id)
 );
 
-
 CREATE TABLE weather_alert(
     alert_id BIGINT NOT NULL UNIQUE GENERATED ALWAYS AS IDENTITY,
     alert_type_id SMALLINT NOT NULL,
@@ -164,4 +159,3 @@ CREATE TABLE user_location_assignment(
         FOREIGN KEY(loc_id) 
             REFERENCES location(loc_id)
 );
-
