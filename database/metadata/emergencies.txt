@@ -1,9 +1,9 @@
-Flood warnings
-Extreme heat
-Extreme wind
-Extreme ice
-Lightning warning
-Extreme snowfall
-Low visibility
-Low air quality
+Heat
+Wind
+Ice
+Lightning
+Snowfall
+Visibility
+Air quality
 UV-index
+Rain

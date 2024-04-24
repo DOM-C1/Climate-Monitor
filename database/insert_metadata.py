@@ -47,7 +47,7 @@ def insert_locations(conn):
     """Insert location metadata into database"""
     with conn.cursor() as cur:
         cur.executemany(
-            "INSERT INTO location (latitude, longitude, location_name, county_id) \
+            "INSERT INTO location (latitude, longitude, loc_name, county_id) \
                 VALUES (%s, %s, %s, %s)", [[float(data.split(', ')[0]),
                                             float(data.split(', ')[1]),
                                             data.split(', ')[2],
@@ -61,7 +61,16 @@ def insert_alert_types(conn):
     with conn.cursor() as cur:
         cur.executemany(
             "INSERT INTO alert_type (name) VALUES (%s)",
-            [[name] for name in get_metadata('emergencies.txt')])
+            [[name] for name in get_metadata('metadata/emergencies.txt')])
+        conn.commit()
+
+
+def insert_severities(conn):
+    """Insert alert types metadata into database"""
+    with conn.cursor() as cur:
+        cur.executemany(
+            "INSERT INTO severity_level (severity_level_id, severity_level) VALUES (%s, %s)",
+            [[int(level.split(', ')[0]), level.split(', ')[1]] for level in get_metadata('metadata/severities.txt')])
         conn.commit()
 
 
@@ -79,6 +88,7 @@ def insert_metadata(config):
     """Insert all metadata into database."""
     with get_db_connection(config) as connection:
         insert_alert_types(connection)
+        insert_severities(connection)
         insert_weather_codes(connection)
         insert_countries(connection)
         insert_counties(connection)
