@@ -1,5 +1,6 @@
 
 
+DROP TABLE air_quality;
 DROP TABLE user_location_assignment;
 DROP TABLE weather_alert;
 DROP TABLE flood_warnings;
@@ -23,7 +24,7 @@ CREATE TABLE country(
 
 CREATE TABLE county(
     county_id SMALLINT NOT NULL UNIQUE GENERATED ALWAYS AS IDENTITY,
-    name VARCHAR(30) NOT NULL,
+    name VARCHAR(50) NOT NULL,
     country_id SMALLINT NOT NULL,
     PRIMARY KEY(county_id),
     CONSTRAINT fk_country
@@ -32,8 +33,8 @@ CREATE TABLE county(
 );
 
 CREATE TABLE severity_level(
-    severity_level_id SMALLINT NOT NULL UNIQUE GENERATED ALWAYS AS IDENTITY,
-    severity_level SMALLINT NOT NULL,
+    severity_level_id SMALLINT NOT NULL,
+    severity_level VARCHAR(30) NOT NULL,
     PRIMARY KEY(severity_level_id)
 );
 
@@ -44,15 +45,15 @@ CREATE TABLE alert_type(
 );
 
 CREATE TABLE weather_code(
-    weather_code_id SMALLINT NOT NULL UNIQUE GENERATED ALWAYS AS IDENTITY,
+    weather_code_id SMALLINT NOT NULL,
     description VARCHAR(30) NOT NULL,
     PRIMARY KEY(weather_code_id)
 );
 
 CREATE TABLE location(
     loc_id INT NOT NULL UNIQUE GENERATED ALWAYS AS IDENTITY,
-    longitude VARCHAR(10) NOT NULL,
-    latitude VARCHAR(10) NOT NULL,
+    longitude FLOAT NOT NULL,
+    latitude FLOAT NOT NULL,
     loc_name VARCHAR(60) NOT NULL,
     county_id SMALLINT NOT NULL,
     PRIMARY KEY(loc_id),
@@ -131,6 +132,20 @@ CREATE TABLE weather_alert(
     CONSTRAINT fk_forecast
         FOREIGN KEY(forecast_id) 
             REFERENCES forecast(forecast_id),
+    CONSTRAINT fk_severity
+        FOREIGN KEY(severity_level_id) 
+            REFERENCES severity_level(severity_level_id)
+);
+
+CREATE TABLE air_quality(
+    air_quality_id BIGINT NOT NULL UNIQUE GENERATED ALWAYS AS IDENTITY,
+    o3_concentration SMALLINT NOT NULL,
+    severity_level_id SMALLINT NOT NULL,
+    weather_report_id SMALLINT NOT NULL,
+    PRIMARY KEY(air_quality_id),
+    CONSTRAINT fk_weather
+        FOREIGN KEY(weather_report_id) 
+            REFERENCES weather_report(weather_report_id),
     CONSTRAINT fk_severity
         FOREIGN KEY(severity_level_id) 
             REFERENCES severity_level(severity_level_id)
