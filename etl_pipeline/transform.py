@@ -1,7 +1,6 @@
-"""Transform a JSON of a single weather report into pandas DataFrames for use in load.py"""
+"""Transform a JSON of a single weather report into a list of dictionaries for use in load.py"""
 from datetime import datetime, timedelta
 from itertools import zip_longest
-from os import environ as ENV
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -9,34 +8,41 @@ from dotenv import load_dotenv
 from extract import get_air_quality, get_weather_details_for_24hrs, get_weather_details_for_week
 
 
-def rename_columns(data: pd.DataFrame):
-    data = data.rename(columns={'time': 'forecast_timestamp', 'relative_humidity_2m': 'humidity',
-                                'precipitation_probability': 'precipitation_prob', 'rain': 'rainfall',
-                                'temperature_2m': 'temperature', 'wind_direction_10m': 'wind_direction',
-                                'wind_gusts_10m': 'wind_gusts', 'wind_speed_10m': 'wind_speed',
+def rename_columns(data: pd.DataFrame) -> pd.DataFrame:
+    """Rename the dataframe columns to match database."""
+    data = data.rename(columns={'time': 'forecast_timestamp',
+                                'relative_humidity_2m': 'humidity',
+                                'precipitation_probability': 'precipitation_prob',
+                                'rain': 'rainfall',
+                                'temperature_2m': 'temperature',
+                                'wind_direction_10m': 'wind_direction',
+                                'wind_gusts_10m': 'wind_gusts',
+                                'wind_speed_10m': 'wind_speed',
                                 'weather_code': 'weather_code_id'})
     return data
 
 
-def change_data_types(data):
+def change_data_types(data: pd.DataFrame) -> pd.DataFrame:
+    """Convert incorrect datatypes to match database."""
     data['forecast_timestamp'] = data['forecast_timestamp'].apply(
         pd.to_datetime)
-    data['visibility'] = data['visibility'].apply(lambda x: int(x))
+    data['visibility'] = data['visibility'].apply(int)
     return data
 
 
-def create_warning_list(forecast):
+def create_warning_list(forecast: tuple) -> list[dict]:
+    """Create a list of weather warnings associated with a forecast."""
     warning_list = []
     for i, alert in enumerate(forecast):
         if alert != 4:
             warning_list.append(
                 {'alert_type_id': i + 1, 'severity_type_id': alert})
     if not warning_list:
-        warning_list is None
+        warning_list = None
     return warning_list
 
 
-def calculate_heat_alerts(temperature: float):
+def calculate_heat_alerts(temperature: float) -> int:
     """Find extreme heat alerts amongst temperature data."""
     if 32 <= temperature:
         return 1
@@ -47,7 +53,7 @@ def calculate_heat_alerts(temperature: float):
     return 4
 
 
-def calculate_wind_alerts(wind_gust: float, wind_speed: float):
+def calculate_wind_alerts(wind_gust: float, wind_speed: float) -> int:
     """Find extreme wind alerts amongst wind data."""
     if 130 <= wind_gust or 80 <= wind_speed:
         return 1
@@ -58,7 +64,7 @@ def calculate_wind_alerts(wind_gust: float, wind_speed: float):
     return 4
 
 
-def calculate_ice_alerts(temperature: float):
+def calculate_ice_alerts(temperature: float) -> int:
     """Find extreme ice alerts amongst temperature and precipitation data."""
     if -10 >= temperature:
         return 1
@@ -69,7 +75,7 @@ def calculate_ice_alerts(temperature: float):
     return 4
 
 
-def calculate_lightning_alerts(lightning: pd.Series):
+def calculate_lightning_alerts(lightning: pd.Series) -> int:
     """Find extreme lightning alerts amongst lightning potential data."""
     if 2500 <= lightning:
         return 1
@@ -80,7 +86,7 @@ def calculate_lightning_alerts(lightning: pd.Series):
     return 4
 
 
-def calculate_snowfall_alerts(snowfall: pd.Series):
+def calculate_snowfall_alerts(snowfall: pd.Series) -> int:
     """Find extreme lightning alerts amongst lightning potential data."""
     if 2 <= snowfall:
         return 1
@@ -91,7 +97,7 @@ def calculate_snowfall_alerts(snowfall: pd.Series):
     return 4
 
 
-def calculate_visibility_alerts(visibility: pd.Series):
+def calculate_visibility_alerts(visibility: pd.Series) -> int:
     """Find low visibility alerts amongst visibility data."""
     if 20 >= visibility:
         return 1
@@ -102,8 +108,8 @@ def calculate_visibility_alerts(visibility: pd.Series):
     return 4
 
 
-def calculate_air_quality_alert(concentration: float):
-    """Find if air quality is an alert from the severity_id."""
+def calculate_air_quality_alert(concentration: float) -> int:
+    """Find if air quality is an alert from the concentration of o3."""
     if 0 <= concentration < 101:
         severity_id = 4
     elif 101 <= concentration < 161:
@@ -115,30 +121,30 @@ def calculate_air_quality_alert(concentration: float):
     return severity_id
 
 
-def calculate_uv_alerts(uv_index: float):
+def calculate_uv_alerts(uv_index: float) -> int:
     """Find extreme uv alerts amongst uv-index data."""
     if 7.5 <= uv_index:
         return 1
-    elif 5.5 <= uv_index < 7.5:
+    if 5.5 <= uv_index < 7.5:
         return 2
-    elif 2.5 <= uv_index < 5.5:
+    if 2.5 <= uv_index < 5.5:
         return 3
     return 4
 
 
-def calculate_rain_alerts(rainfall: float):
+def calculate_rain_alerts(rainfall: float) -> int:
     """Find extreme rain alerts amongst rainfall data."""
     if 10 <= rainfall:
         return 1
-    elif 5 <= rainfall < 10:
+    if 5 <= rainfall < 10:
         return 2
-    elif 3 <= rainfall < 5:
+    if 3 <= rainfall < 5:
         return 3
     return 4
 
 
-def get_weather_alerts(weather_data: pd.DataFrame):
-    """Find alerts for weather in dataframe."""
+def get_weather_alerts(weather_data: pd.DataFrame) -> pd.DataFrame:
+    """Obtain a dataframe of alerts for a forecast."""
     alerts = pd.DataFrame()
     twelve_hour_data = weather_data[weather_data['forecast_timestamp'] < datetime.now(
     ) + timedelta(hours=12)]
@@ -161,7 +167,8 @@ def get_weather_alerts(weather_data: pd.DataFrame):
     return alerts
 
 
-def gather_data_from_json(json_data, key):
+def gather_data_from_json(json_data: dict, key: str) -> list[dict]:
+    """Obtain transformed forecast data from hourly or 15-minutely data."""
     data = pd.DataFrame(json_data[key])
     data = data.map(lambda x: 0 if x is None or x == 'null' else x)
     data = rename_columns(data)
@@ -171,20 +178,24 @@ def gather_data_from_json(json_data, key):
     warnings = alerts.itertuples(index=False, name=None)
     forecast_warnings = (create_warning_list(forecast)
                          for forecast in warnings)
-    return list({'forecast': x, 'warnings': y} for x, y in zip_longest(forecasts, forecast_warnings))
+    return list({'forecast': x, 'warnings': y} for x, y
+                in zip_longest(forecasts, forecast_warnings))
 
 
-def gather_weather_data(latitude, longitude):
+def gather_weather_data(latitude: float, longitude: float) -> list[dict]:
+    """Obtain transformed forecast data for the whole weather report."""
     minutely_data = get_weather_details_for_24hrs(latitude, longitude)
     hourly_data = get_weather_details_for_week(latitude, longitude)
-    return gather_data_from_json(minutely_data, 'minutely_15') + gather_data_from_json(hourly_data, 'hourly'),
+    return gather_data_from_json(minutely_data, 'minutely_15') +\
+        gather_data_from_json(hourly_data, 'hourly')
 
 
-def gather_air_quality(latitude, longitude):
+def gather_air_quality(latitude: float, longitude: float) -> dict:
+    """Obtain the o3 air quality for the weather report."""
     concentration = get_air_quality(latitude, longitude)['O3']['concentration']
     try:
         concentration = float(concentration)
-    except:
+    except ValueError:
         concentration = 'error'
     if concentration < 0:
         concentration = 'error'
