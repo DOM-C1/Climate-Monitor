@@ -7,7 +7,7 @@ import requests
 
 
 def time_rounder(t):
-    return (t.replace(second=0, microsecond=0, minute=(t.minute // 15 * 15), hour=t.hour))
+    return (t.replace(second=0, microsecond=0, minute=(t.minute // 15 * 15)))
 
 
 today = time_rounder(datetime.now())
@@ -51,3 +51,4 @@ def get_air_quality(latitude: float, longitude: float) -> dict:
 
 
 print(time_rounder(datetime.now()))
+print(today)
