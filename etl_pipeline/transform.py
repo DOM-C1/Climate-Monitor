@@ -66,11 +66,11 @@ def calculate_wind_alerts(wind_gust: float, wind_speed: float) -> int:
 
 def calculate_ice_alerts(temperature: float) -> int:
     """Find extreme ice alerts amongst temperature and precipitation data."""
-    if -10 >= temperature:
+    if temperature <= -10:
         return 1
-    if -5 >= temperature > -10:
+    if -10 <= temperature < -5:
         return 2
-    if -3 >= temperature > -5:
+    if -5 <= temperature < -3:
         return 3
     return 4
 
@@ -99,11 +99,11 @@ def calculate_snowfall_alerts(snowfall: pd.Series) -> int:
 
 def calculate_visibility_alerts(visibility: pd.Series) -> int:
     """Find low visibility alerts amongst visibility data."""
-    if 20 >= visibility:
+    if visibility <= 20:
         return 1
-    if 50 >= visibility > 20:
+    if 20 <= visibility < 50:
         return 2
-    if 150 >= visibility > 0.5:
+    if 50 <= visibility < 150:
         return 3
     return 4
 
