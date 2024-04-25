@@ -108,6 +108,7 @@ CREATE TABLE flood_warnings(
     severity_level_id SMALLINT NULL,
     time_raised TIMESTAMP NOT NULL,
     loc_id INT NOT NULL,
+    notified BOOLEAN DEFAULT FALSE,
     PRIMARY KEY(flood_id),
     CONSTRAINT fk_loc
         FOREIGN KEY(loc_id) 
@@ -122,6 +123,7 @@ CREATE TABLE weather_alert(
     alert_type_id SMALLINT NOT NULL,
     forecast_id BIGINT NOT NULL,
     severity_level_id SMALLINT NOT NULL,
+    notified BOOLEAN DEFAULT FALSE,
     PRIMARY KEY(alert_id),
     CONSTRAINT fk_forecast
         FOREIGN KEY(forecast_id) 
@@ -136,6 +138,7 @@ CREATE TABLE air_quality(
     o3_concentration SMALLINT NOT NULL,
     severity_level_id SMALLINT NOT NULL,
     weather_report_id SMALLINT NOT NULL,
+    notified BOOLEAN DEFAULT FALSE,
     PRIMARY KEY(air_quality_id),
     CONSTRAINT fk_weather
         FOREIGN KEY(weather_report_id) 
