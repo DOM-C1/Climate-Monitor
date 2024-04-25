@@ -4,8 +4,8 @@ from os import environ as ENV
 from dotenv import load_dotenv
 from flask import Flask, request, render_template
 
-from utils import get_long_lat, get_location_name, get_details_from_post_code, get_country, get_county
-from utils_db import get_db_connection, add_to_database, get_id
+from utils import get_details_from_post_code
+from utils_db import get_db_connection, get_id, setup_user_location, get_value_from_db
 
 
 app = Flask(__name__)
@@ -17,13 +17,27 @@ def homepage():
     return render_template('newsletter.html')
 
 
-@app.route('/submit-user', methods=['POST'])
+@app.route('/submit-location', methods=['POST'])
 def submit_user():
-    """When a request is sent, the user name and email is parsed and uploaded
-    to the database."""
+    """When a request is sent, the users new location is sent to the database."""
     email = request.form['email']
-    name = request.form['name']
-    return f"Thank you {name} your email {email} has been added to the database! "
+    postcode = request.form['postcode']
+    details = get_details_from_post_code(postcode)
+    conn = get_db_connection(ENV)
+    user_id = get_id('user_details', 'email', email, conn)
+    if user_id == -1:
+        return render_template('user_not_found.html')
+
+    if details['status'] != 200:
+        return render_template('cant_be_found_page.html')
+    alert_on = get_value_from_db(
+        'user_location_assignment', 'alert_opt_in', user_id, 'user_id', conn)
+    report_on = get_value_from_db(
+        'user_location_assignment', 'report_opt_in', user_id, 'user_id', conn)
+    name = get_value_from_db(
+        'user_details', 'name', user_id, 'user_id', conn)
+    setup_user_location(details, name, email, report_on, alert_on, conn)
+    return 'Location added!'
 
 
 @app.route('/location')
@@ -32,33 +46,21 @@ def location_page():
     return render_template('location_form.html')
 
 
-@app.route('/submit-location', methods=['POST'])
+@app.route('/submit-user', methods=['POST'])
 def submit_location():
-    """When users submit a location, the information gets directed here, where it
-    get parsed and uploaded."""
-    location_type = request.form['location']
-    location_value = request.form[location_type]
+    """When a user signs-up, it gets sent through here and uploaded
+       to the database."""
+    location_value = request.form['location']
+    name = request.form['name']
+    email = request.form['email']
+    sub_newsletter = request.form.get('newsletter', 'off') == 'on'
+    sub_alerts = request.form.get('alerts', 'off') == 'on'
     details = get_details_from_post_code(location_value)
+    conn = get_db_connection()
     if details['status'] == 200:
-        longitude, latitude = get_long_lat(location_value)
-        location_name = get_location_name(location_value)
-        country = get_country(location_value)
-        county = get_county(location_value)
-        conn = get_db_connection()
-        country_id = get_id('country_id', 'name', county, conn)
-        if country_id == -1:
-            raise ValueError('Invalid Country')
-        county_id = get_id('county', 'name', county)
-        if county_id == -1:
-            county_data = {'name': county, 'country_id': country}
-            add_to_database('county', county_data, conn)
-            county_id = get_id('county', 'name', county)
-        location_data = {'loc_name': location_name,
-                         'country_id': country_id, 'county_id': county_id, 'longitude': longitude, 'latitude': latitude}
-        add_to_database('county', location_data, conn)
-        conn.close()
-
-    return "USER CREATED"
+        setup_user_location(details, name, email,
+                            sub_newsletter, sub_alerts, conn)
+    return render_template('cant_be_found_page.html')
 
 
 if __name__ == '__main__':
