@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from itertools import zip_longest
 
 import pandas as pd
-from dotenv import load_dotenv
 
 from extract import get_air_quality, get_weather_details_for_24hrs, get_weather_details_for_week
 

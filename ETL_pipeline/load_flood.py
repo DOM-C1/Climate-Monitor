@@ -1,14 +1,9 @@
 """Load flood warnings into the database"""
 
-from os import environ as ENV
-
 import psycopg2
 import psycopg2.extras
 from psycopg2.extensions import connection
 from geopy.geocoders import Nominatim
-from dotenv import load_dotenv
-
-from transform_flood import get_all_floods
 
 
 def get_db_connection(config):
@@ -77,7 +72,7 @@ def insert_location(conn: connection, latitude: float, longitude: float) -> int 
     and country where they don't already exist."""
     location, county, country = get_location_names(latitude, longitude)
     if country:
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(f"""SELECT country_id FROM country
                             WHERE name = '{country}'""")
             country_id = cur.fetchone()[0]
@@ -103,7 +98,7 @@ def insert_location(conn: connection, latitude: float, longitude: float) -> int 
 
 def get_location_id(conn: connection, latitude: float, longitude: float) -> int | None:
     """Obtain the location id from the database."""
-    with conn.cursor() as cur:
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(f"""SELECT loc_id FROM location
                     WHERE latitude = {latitude}
                     AND longitude = {longitude}""")
@@ -121,7 +116,7 @@ def insert_flood(conn: connection, flood: dict) -> None:
     if loc_id:
         severity_level_id = flood['severity_level_id']
         time_raised = flood['time_raised']
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(f"""SELECT * FROM flood_warnings
                         WHERE severity_level_id = {severity_level_id}
                         AND time_raised = '{time_raised}'
