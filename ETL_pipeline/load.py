@@ -20,10 +20,10 @@ def get_db_connection(config: dict) -> connection:
     )
 
 
-def get_location_id(conn:connection, latitude: float, longitude: float) -> int:
+def get_location_id(conn: connection, latitude: float, longitude: float) -> int:
     """Returns the location ID for a given latitude and longitude."""
 
-    q = """
+    sql_query = """
         SELECT loc_id
         FROM location
         WHERE latitude = %s
@@ -31,7 +31,7 @@ def get_location_id(conn:connection, latitude: float, longitude: float) -> int:
         """
 
     with conn.cursor() as cur:
-        cur.execute(q, (latitude, longitude))
+        cur.execute(sql_query, (latitude, longitude))
         location_id = cur.fetchone()
 
     return location_id["loc_id"]
@@ -40,7 +40,7 @@ def get_location_id(conn:connection, latitude: float, longitude: float) -> int:
 def insert_weather_report(conn: connection, location_id: int) -> int:
     """Returns a weather report ID from the database having inserted a weather report."""
 
-    q = """
+    sql_query = """
         INSERT INTO weather_report
             (report_time, loc_id)
         VALUES
@@ -49,7 +49,7 @@ def insert_weather_report(conn: connection, location_id: int) -> int:
         """
 
     with conn.cursor() as cur:
-        cur.execute(q, (datetime.now(), location_id))
+        cur.execute(sql_query, (datetime.now(), location_id))
         weather_report_id = cur.fetchone()
     conn.commit()
 
@@ -59,7 +59,7 @@ def insert_weather_report(conn: connection, location_id: int) -> int:
 def insert_forecast(conn: connection, forecast: dict, weather_report_id: int) -> int:
     """Returns the forecast ID from the database having inserted a forecast."""
 
-    q = """
+    sql_query = """
         INSERT INTO forecast
             (forecast_timestamp, visibility, humidity, precipitation,
              precipitation_prob, rainfall, snowfall, wind_speed, wind_direction,
@@ -72,23 +72,23 @@ def insert_forecast(conn: connection, forecast: dict, weather_report_id: int) ->
         """
 
     with conn.cursor() as cur:
-        cur.execute(q, (forecast["forecast_timestamp"],
-                        forecast["visibility"],
-                        forecast["humidity"],
-                        forecast["precipitation"],
-                        forecast["precipitation_prob"],
-                        forecast["rainfall"],
-                        forecast["snowfall"],
-                        forecast["wind_speed"],
-                        forecast["wind_direction"],
-                        forecast["wind_gusts"],
-                        forecast["lightning_potential"],
-                        forecast["uv_index"],
-                        forecast["cloud_cover"],
-                        forecast["temperature"],
-                        forecast["apparent_temperature"],
-                        weather_report_id,
-                        forecast["weather_code_id"]))
+        cur.execute(sql_query, (forecast["forecast_timestamp"],
+                                forecast["visibility"],
+                                forecast["humidity"],
+                                forecast["precipitation"],
+                                forecast["precipitation_prob"],
+                                forecast["rainfall"],
+                                forecast["snowfall"],
+                                forecast["wind_speed"],
+                                forecast["wind_direction"],
+                                forecast["wind_gusts"],
+                                forecast["lightning_potential"],
+                                forecast["uv_index"],
+                                forecast["cloud_cover"],
+                                forecast["temperature"],
+                                forecast["apparent_temperature"],
+                                weather_report_id,
+                                forecast["weather_code_id"]))
         forecast_id = cur.fetchone()
     conn.commit()
 
@@ -100,7 +100,7 @@ def insert_weather_alert(conn: connection, weather_alert: dict, forecast_id: int
 
     # TODO: check for matching alert in the database.
 
-    q = """
+    sql_query = """
         INSERT INTO weather_alert
             (alert_type_id, forecast_id, severity_level_id)
         VALUES
@@ -117,7 +117,7 @@ def insert_weather_alert(conn: connection, weather_alert: dict, forecast_id: int
 def insert_air_quality(conn: connection, air_quality: dict, weather_report_id: int) -> None:
     """Inserts an air quality reading to the database."""
 
-    q = """
+    sql_query = """
         INSERT INTO air_quality
             (o3_concentration, severity_level_id, weather_report_id)
         VALUES
@@ -125,7 +125,7 @@ def insert_air_quality(conn: connection, air_quality: dict, weather_report_id: i
         """
 
     with conn.cursor() as cur:
-        cur.execute(q , (air_quality["o3_concentration"],
-                         air_quality["severity_id"],
-                         weather_report_id))
+        cur.execute(q, (air_quality["o3_concentration"],
+                        air_quality["severity_id"],
+                        weather_report_id))
     conn.commit()
