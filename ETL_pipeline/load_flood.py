@@ -1,12 +1,14 @@
 """Load flood warnings into the database"""
 
+from os import _Environ
+
 from psycopg2 import connect
 from psycopg2.extras import RealDictCursor
 from psycopg2.extensions import connection
 from geopy.geocoders import Nominatim
 
 
-def get_db_connection(config):
+def get_db_connection(config: _Environ):
     """Connect to the database."""
     return connect(
         user=config["DB_USER"],
@@ -129,7 +131,7 @@ def insert_flood(conn: connection, flood: dict) -> None:
                 conn.commit()
 
 
-def insert_all_floods(config, floods: list[dict]) -> None:
+def insert_all_floods(config: _Environ, floods: list[dict]) -> None:
     """Insert all floods in the data into the database."""
     with get_db_connection(config) as conn:
         for flood in floods:
