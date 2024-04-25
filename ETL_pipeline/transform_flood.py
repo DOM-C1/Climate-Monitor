@@ -58,7 +58,3 @@ def get_all_floods() -> list[dict]:
                                      'time_raised']].drop_duplicates(ignore_index=True)
     flood_warnings = flood_warnings.reset_index(drop=True)
     return flood_warnings.to_dict(orient="records")
-
-
-if __name__ == "__main__":
-    print(get_all_floods())

@@ -139,8 +139,3 @@ def insert_all_floods(config, floods: list[dict]) -> None:
     with get_db_connection(config) as conn:
         for flood in floods:
             insert_flood(conn, flood)
-
-
-if __name__ == "__main__":
-    load_dotenv()
-    insert_all_floods(ENV, get_all_floods())

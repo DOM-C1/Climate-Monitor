@@ -201,10 +201,3 @@ def gather_air_quality(latitude: float, longitude: float) -> dict:
         concentration = 'error'
     severity_id = calculate_air_quality_alert(concentration)
     return {'o3_concentration': concentration, 'severity_id': severity_id}
-
-
-if __name__ == "__main__":
-    load_dotenv()
-    for x in gather_weather_data(0, 0):
-        print(x)
-    print(gather_air_quality(0, 0))
