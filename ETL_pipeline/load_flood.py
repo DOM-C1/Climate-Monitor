@@ -67,7 +67,7 @@ def get_location_names(latitude: float, longitude: float) -> tuple[str]:
     return location, county, country
 
 
-def insert_location(conn: connection, latitude: float, longitude: float) -> int | None:
+def insert_location(conn: connection, latitude: float, longitude: float) -> int:
     """Insert a location into the database, and it's associated county 
     and country where they don't already exist."""
     location, county, country = get_location_names(latitude, longitude)
@@ -93,10 +93,10 @@ def insert_location(conn: connection, latitude: float, longitude: float) -> int 
             conn.commit()
             loc_id = cur.fetchone()
         return loc_id
-    return None
+    return 0
 
 
-def get_location_id(conn: connection, latitude: float, longitude: float) -> int | None:
+def get_location_id(conn: connection, latitude: float, longitude: float) -> int:
     """Obtain the location id from the database."""
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(f"""SELECT loc_id FROM location
@@ -107,7 +107,7 @@ def get_location_id(conn: connection, latitude: float, longitude: float) -> int 
         loc_id = insert_location(conn, latitude, longitude)
     if loc_id:
         return loc_id[0]
-    return None
+    return 0
 
 
 def insert_flood(conn: connection, flood: dict) -> None:
