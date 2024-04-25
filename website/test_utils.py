@@ -3,8 +3,8 @@ import unittest
 from unittest.mock import patch
 import pandas as pd
 
+from utils import get_long_lat, get_location_name, get_county
 
-from utils import get_df, get_long_lat, get_location_name, get_county
 
 class TestDatabaseTools(unittest.TestCase):
     """Test suite for database utility functions."""
@@ -25,25 +25,20 @@ class TestDatabaseTools(unittest.TestCase):
         """Clean up after tests by stopping the patcher."""
         self.patcher.stop()
 
-    def test_get_df(self):
-        """Test if get_df correctly reads data into a DataFrame."""
-        df = get_df()
-        pd.testing.assert_frame_equal(df, self.example_data)
-
     def test_get_long_lat(self):
         """Test fetching longitude and latitude by postcode."""
-        longitude, latitude = get_long_lat('AB10')
+        longitude, latitude = get_long_lat(self.example_data)
         self.assertEqual(longitude, 2.12)
         self.assertEqual(latitude, 57.13)
 
     def test_get_location_name(self):
         """Test fetching location name by postcode."""
-        location_name = get_location_name('AB10')
+        location_name = get_location_name(self.example_data)
         self.assertEqual(location_name, 'Town1')
 
     def test_get_county(self):
         """Test fetching county by postcode."""
-        county = get_county('AB10')
+        county = get_county(self.example_data)
         self.assertEqual(county, 'Region1')
 
 
