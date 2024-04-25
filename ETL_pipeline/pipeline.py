@@ -15,7 +15,7 @@ def pipeline(latitude: float, longitude: float) -> None:
     load_dotenv()
 
     weather = gather_weather_data(latitude, longitude)
-    air_quality = gather_air_quality(latitude, longitude)
+    air_quality = gather_air_quality(latitude, longitude, ENV)
 
     connection = get_db_connection(ENV)
 
@@ -30,6 +30,13 @@ def pipeline(latitude: float, longitude: float) -> None:
                 insert_weather_alert(connection, warning, forecast_id)
 
     insert_air_quality(connection, air_quality, weather_report_id)
+
+
+def handler(event: list[dict], context: dict = None) -> None:
+    """AWS Lambda function handler of the pipeline for multiple locations."""
+
+    for e in event:
+        pipeline(e["latitude"], e["longitude"])
 
 
 if __name__ == "__main__":

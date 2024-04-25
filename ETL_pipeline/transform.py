@@ -189,9 +189,10 @@ def gather_weather_data(latitude: float, longitude: float) -> list[dict]:
         gather_data_from_json(hourly_data, 'hourly')
 
 
-def gather_air_quality(latitude: float, longitude: float) -> dict:
+def gather_air_quality(latitude: float, longitude: float, config: dict) -> dict:
     """Obtain the o3 air quality for the weather report."""
-    concentration = get_air_quality(latitude, longitude)['O3']['concentration']
+    concentration = get_air_quality(latitude, longitude, config)[
+        'O3']['concentration']
     try:
         concentration = float(concentration)
     except ValueError:

@@ -108,9 +108,9 @@ def insert_weather_alert(conn: connection, weather_alert: dict, forecast_id: int
         """
 
     with conn.cursor() as cur:
-        cur.execute(q, (weather_alert["alert_type_id"],
-                        forecast_id,
-                        weather_alert["severity_type_id"]))
+        cur.execute(sql_query, (weather_alert["alert_type_id"],
+                                forecast_id,
+                                weather_alert["severity_type_id"]))
     conn.commit()
 
 
@@ -125,7 +125,7 @@ def insert_air_quality(conn: connection, air_quality: dict, weather_report_id: i
         """
 
     with conn.cursor() as cur:
-        cur.execute(q, (air_quality["o3_concentration"],
-                        air_quality["severity_id"],
-                        weather_report_id))
+        cur.execute(sql_query, (air_quality["o3_concentration"],
+                                air_quality["severity_id"],
+                                weather_report_id))
     conn.commit()
