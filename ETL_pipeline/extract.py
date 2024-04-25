@@ -10,27 +10,26 @@ def time_rounder(t):
     return (t.replace(second=0, microsecond=0, minute=(t.minute // 15 * 15), hour=t.hour))
 
 
+today = time_rounder(datetime.now())
+tomorrow = today + timedelta(days=1)
+next_week = today + timedelta(weeks=1, hours=1)
+tomorrow_str = tomorrow.isoformat(timespec='minutes')
+next_week_str = next_week.isoformat(timespec='minutes')
+today_str = today.isoformat(timespec='minutes')
+
+
 def get_weather_details_for_week(latitude: float, longitude: float) -> dict:
     """This function extracts the weather details for the coming week."""
-    today = time_rounder(datetime.now())
-    tomorrow = today + timedelta(days=1)
-    next_week = today + timedelta(weeks=1, hours=1)
-    tomorrow_str = tomorrow.isoformat(timespec='minutes')
-    next_week_str = next_week.isoformat(timespec='minutes')
     response = requests.get(
-        f'https://api.open-meteo.com/v1/forecast?latitude={str(latitude)}&longitude={str(longitude)}&hourly=apparent_temperature,cloud_cover,relative_humidity_2m,lightning_potential,precipitation,precipitation_probability,rain,snowfall,temperature_2m,uv_index,visibility,wind_direction_10m,wind_gusts_10m,wind_speed_10m,weather_code&start_hour={tomorrow_str}&end_hour={next_week_str}',
+        f'https://api.open-meteo.com/v1/forecast?latitude={str(latitude)}&longitude={str(longitude)}&hourly=apparent_temperature,cloud_cover,relative_humidity_2m,lightning_potential,precipitation,precipitation_probability,rain,snowfall,temperature_2m,uv_index,visibility,wind_direction_10m,wind_gusts_10m,wind_speed_10m,weather_code&start_hour={tomorrow_str}&end_hour={next_week_str}&timezone=Europe/London',
         timeout=6)
     return response.json()
 
 
 def get_weather_details_for_24hrs(latitude: float, longitude: float) -> dict:
     """This function extracts the weather details for the next 24hours."""
-    today = time_rounder(datetime.now())
-    tomorrow = today + timedelta(days=1)
-    today_str = today.isoformat(timespec='minutes')
-    tomorrow_str = tomorrow.isoformat(timespec='minutes')
     response = requests.get(
-        f'https://api.open-meteo.com/v1/forecast?latitude={str(latitude)}&longitude={str(longitude)}&minutely_15=apparent_temperature,cloud_cover,relative_humidity_2m,lightning_potential,precipitation,precipitation_probability,rain,snowfall,temperature_2m,uv_index,visibility,wind_direction_10m,wind_gusts_10m,wind_speed_10m,weather_code&start_minutely_15={today_str}&end_minutely_15={tomorrow_str}',
+        f'https://api.open-meteo.com/v1/forecast?latitude={str(latitude)}&longitude={str(longitude)}&minutely_15=apparent_temperature,cloud_cover,relative_humidity_2m,lightning_potential,precipitation,precipitation_probability,rain,snowfall,temperature_2m,uv_index,visibility,wind_direction_10m,wind_gusts_10m,wind_speed_10m,weather_code&start_minutely_15={today_str}&end_minutely_15={tomorrow_str}&timezone=Europe/London',
         timeout=6)
     return response.json()
 
