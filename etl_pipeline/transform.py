@@ -4,14 +4,9 @@ from itertools import zip_longest
 from os import environ as ENV
 
 import pandas as pd
-import psycopg2
-import psycopg2.extras
-import requests
 from dotenv import load_dotenv
-from geopy.geocoders import Nominatim
 
-
-from extract import get_air_quality, get_flood_warning_json, get_weather_details_for_24hrs, get_weather_details_for_week
+from extract import get_air_quality, get_weather_details_for_24hrs, get_weather_details_for_week
 
 
 def rename_columns(data: pd.DataFrame):
@@ -197,31 +192,8 @@ def gather_air_quality(latitude, longitude):
     return {'o3_concentration': concentration, 'severity_id': severity_id}
 
 
-def get_flood_warning(data: dict):
-    geolocator = Nominatim(user_agent="my_application")
-    warnings = []
-    severity = data['severityLevel']
-    time_raised = data['timeRaised']
-    for location_place in data['floodArea']['county'].split(', '):
-        location = geolocator.geocode(location_place)
-        flood_dict = {"latitiude": location.latitude, "longitude": location.longitude,
-                      "severity_id": severity, "time_raised": time_raised}
-        if flood_dict not in warnings:
-            warnings.append(flood_dict)
-    return warnings
-
-
-def get_all_floods():
-    flood_warnings = []
-    for flood in get_flood_warning_json()['items']:
-        if datetime.strptime(flood['timeMessageChanged'], "%Y-%m-%dT%H:%M:%S") > datetime.now() - timedelta(hours=1):
-            flood_warnings += get_flood_warning(flood)
-    return flood_warnings
-
-
 if __name__ == "__main__":
     load_dotenv()
     for x in gather_weather_data(0, 0):
         print(x)
     print(gather_air_quality(0, 0))
-    print(get_all_floods())
