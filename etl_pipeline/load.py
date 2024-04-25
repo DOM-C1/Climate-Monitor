@@ -4,10 +4,12 @@ from os import environ as ENV
 from datetime import datetime
 
 from dotenv import load_dotenv
-from psycopg2 import connect, Connection
+from psycopg2 import connect
+from psycopg2.extras import RealDictCursor
+from psycopg2.extensions import connection
 
 
-def get_db_connection(config: dict) -> Connection:
+def get_db_connection(config: dict) -> connection:
     """Returns a connection to the database."""
 
     return connect(
@@ -15,11 +17,12 @@ def get_db_connection(config: dict) -> Connection:
         password=config["DB_PASSWORD"],
         host=config["DB_HOST"],
         port=config["DB_PORT"],
-        database=config["DB_NAME"]
+        database=config["DB_NAME"],
+        cursor_factory=RealDictCursor
     )
 
 
-def insert_weather_report(conn: Connection, location_id: int) -> int:
+def insert_weather_report(conn: connection, location_id: int) -> int:
     """Returns a weather report ID from the database having inserted a weather report."""
 
     q = """
@@ -38,29 +41,49 @@ def insert_weather_report(conn: Connection, location_id: int) -> int:
     return weather_report_id
 
 
-def insert_forecast(conn: Connection, forecast: dict, weather_report_id: int) -> int:
+def insert_forecast(conn: connection, forecast: dict, weather_report_id: int) -> int:
     """Returns the forecast ID from the database having inserted a forecast."""
-
-    forecast["weather_report_id"] = weather_report_id
 
     q = """
         INSERT INTO forecast
-            {cols}
+            (forecast_timestamp, visibility, humidity, precipitation,
+             precipitation_prob, rainfall, snowfall, wind_speed, wind_direction,
+             wind_gusts, lightning_potential, uv_index, cloud_cover, temperature,
+             apparent_temperature, weather_report_id, weather_code_id)
         VALUES
-            {vals}
+            (%s, %s, %s, %s, %s, %s, %s, %s, %s,
+             %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING forecast_id;
-        """.format(cols=forecast.keys(), vals=forecast.values())
+        """
 
     with conn.cursor() as cur:
-        cur.execute(q)
+        cur.execute(q, (forecast["forecast_timestamp"],
+                        forecast["visibility"],
+                        forecast["humidity"],
+                        forecast["precipitation"],
+                        forecast["precipitation_prob"],
+                        forecast["rainfall"],
+                        forecast["snowfall"],
+                        forecast["wind_speed"],
+                        forecast["wind_direction"],
+                        forecast["wind_gusts"],
+                        forecast["lightning_potential"],
+                        forecast["uv_index"],
+                        forecast["cloud_cover"],
+                        forecast["temperature"],
+                        forecast["apparent_temperature"],
+                        weather_report_id,
+                        forecast["weather_code_id"]))
         forecast_id = cur.fetchone()
     conn.commit()
 
     return forecast_id
 
 
-def insert_weather_alert(conn: Connection, weather_alert: dict, forecast_id: int) -> None:
+def insert_weather_alert(conn: connection, weather_alert: dict, forecast_id: int) -> None:
     """Inserts a weather alert into the database."""
+
+    # TODO: check for matching alert in the database.
 
     q = """
         INSERT INTO weather_alert
@@ -76,24 +99,7 @@ def insert_weather_alert(conn: Connection, weather_alert: dict, forecast_id: int
     conn.commit()
 
 
-def insert_flood_warning(conn: Connection, flood_warning: dict, location_id: int) -> None:
-    """Inserts a flood warning into the database."""
-
-    q = """
-        INSERT INTO flood_warnings
-            (severity_level_id, time_raised, loc_id)
-        VALUES
-            (%s, %s, %s);
-        """
-
-    with conn.cursor() as cur:
-        cur.execute(q, (flood_warning["severity_level_id"],
-                        flood_warning["time_raised"],
-                        location_id))
-    conn.commit()
-
-
-def insert_air_quality(conn: Connection, air_quality: dict, weather_report_id: int) -> None:
+def insert_air_quality(conn: connection, air_quality: dict, weather_report_id: int) -> None:
     """Inserts an air quality reading to the database."""
 
     q = """
