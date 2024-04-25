@@ -17,7 +17,7 @@ def get_db_connection(config: dict):
     )
 
 
-def get_location(address: dict) -> str | None:
+def get_location(address: dict) -> str:
     """Extract the city/town/village name of a location."""
     if 'city' in address:
         return address['city']
@@ -25,19 +25,19 @@ def get_location(address: dict) -> str | None:
         return address['town']
     if 'village' in address:
         return address['village']
-    return None
+    return ""
 
 
-def get_county(address: dict) -> str | None:
+def get_county(address: dict) -> str:
     """Extract the county name of a location."""
     if 'county' in address:
         return address['county']
     if 'state_district' in address:
         return address['state_district']
-    return None
+    return ""
 
 
-def get_country(address: dict) -> str | None:
+def get_country(address: dict) -> str:
     """Extract the country name of a location."""
     items = address.values()
     if 'England' in items:
@@ -48,7 +48,7 @@ def get_country(address: dict) -> str | None:
         return 'Wales'
     if 'Northern Ireland / Tuaisceart Éireann' in items:
         return 'Northern Ireland'
-    return None
+    return ""
 
 
 def get_location_names(latitude: float, longitude: float) -> tuple[str]:
