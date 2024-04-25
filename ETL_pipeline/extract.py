@@ -6,9 +6,13 @@ from dotenv import load_dotenv
 import requests
 
 
+def time_rounder(t):
+    return (t.replace(second=0, microsecond=0, minute=(t.minute // 15 * 15), hour=t.hour))
+
+
 def get_weather_details_for_week(latitude: float, longitude: float) -> dict:
     """This function extracts the weather details for the coming week."""
-    today = datetime.now()
+    today = time_rounder(datetime.now())
     tomorrow = today + timedelta(days=1)
     next_week = today + timedelta(weeks=1, hours=1)
     tomorrow_str = tomorrow.isoformat(timespec='minutes')
@@ -21,7 +25,7 @@ def get_weather_details_for_week(latitude: float, longitude: float) -> dict:
 
 def get_weather_details_for_24hrs(latitude: float, longitude: float) -> dict:
     """This function extracts the weather details for the next 24hours."""
-    today = datetime.now()
+    today = time_rounder(datetime.now())
     tomorrow = today + timedelta(days=1)
     today_str = today.isoformat(timespec='minutes')
     tomorrow_str = tomorrow.isoformat(timespec='minutes')
@@ -45,3 +49,6 @@ def get_air_quality(latitude: float, longitude: float) -> dict:
     response = requests.get(
         api_url, headers={'X-Api-Key': ENV['API_KEY']}, timeout=6)
     return response.json()
+
+
+print(time_rounder(datetime.now()))
