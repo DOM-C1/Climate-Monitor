@@ -5,7 +5,7 @@ West Yorkshire, 1
 Glasgow City, 3
 Hampshire, 1
 Liverpool City Region, 1
-North of Tyne, 1
+Northumberland, 1
 Nottinghamshire, 1
 South Yorkshire, 1
 City of Bristol, 1
@@ -15,5 +15,5 @@ Leicestershire, 1
 City of Edinburgh, 3
 Bournemouth, 1
 Cardiff, 4
-Tees Valley, 1
+Stockton-on-Tees, 1
 Stoke-on-Trent, 1
