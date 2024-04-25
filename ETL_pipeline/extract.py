@@ -10,7 +10,7 @@ def get_weather_details_for_week(latitude: float, longitude: float) -> dict:
     """This function extracts the weather details for the coming week."""
     today = datetime.now()
     tomorrow = today + timedelta(days=1)
-    next_week = today + timedelta(weeks=1)
+    next_week = today + timedelta(weeks=1, hours=1)
     tomorrow_str = tomorrow.isoformat(timespec='minutes')
     next_week_str = next_week.isoformat(timespec='minutes')
     response = requests.get(
