@@ -48,7 +48,3 @@ def get_air_quality(latitude: float, longitude: float) -> dict:
     response = requests.get(
         api_url, headers={'X-Api-Key': ENV['API_KEY']}, timeout=6)
     return response.json()
-
-
-print(time_rounder(datetime.now()))
-print(today)
