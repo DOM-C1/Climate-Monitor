@@ -1,4 +1,4 @@
-"""This file provides useful functions needed to do databse related things."""
+"""This file provides useful functions needed to do database related things."""
 from flask import render_template
 from psycopg2 import connect
 from utils import get_country, get_county, get_long_lat, get_location_name
@@ -52,6 +52,8 @@ def get_loc_id(longitude: float, latitude: float, conn: connect) -> int:
 
 
 def setup_user_location(details, name, email, sub_newsletter, sub_alerts, conn):
+    """This sets up location tracking for a user, if the user exists then it just adds a new
+       location, otherwise, it sets up the new user too."""
     longitude, latitude = get_long_lat(details)
     location_name = get_location_name(details)
     country = get_country(details)
