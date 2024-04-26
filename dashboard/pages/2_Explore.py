@@ -59,7 +59,7 @@ def get_locations_with_alerts():
     """Get the loc_id and alert type if they exist in database"""
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""SET timezone='Europe/London'""")
-        cur.execute("""SELECT AL.name as "Alert type", SL.severity_level as "Severity", 
+        cur.execute("""SELECT AL.name as "Alert type", SL.severity_level as "Severity",
                     L.loc_name as "Location", L.loc_id, MIN(F.forecast_timestamp) as min_time, MAX(F.forecast_timestamp) as max_time
                     FROM weather_alert AS WA
                     JOIN forecast AS F ON (WA.forecast_id = F.forecast_id)
@@ -67,7 +67,11 @@ def get_locations_with_alerts():
                     JOIN alert_type AS AL ON (WA.alert_type_id = AL.alert_type_id)
                     JOIN weather_report AS WR ON (F.weather_report_id = WR.weather_report_id)
                     JOIN location AS L ON (WR.loc_id = L.loc_id)
-                    WHERE SL.severity_level_id != 4
+                    WHERE SL.severity_level_id < 
+                    CASE WHEN AL.name = 'UV-index'
+                    THEN 3
+                    ELSE 4
+                    END
                     AND F.forecast_timestamp > NOW()
                     GROUP BY L.loc_id, "Alert type", "Severity", SL.severity_level_id
                     ORDER BY SL.severity_level_id DESC, L.loc_id ASC
@@ -77,67 +81,6 @@ def get_locations_with_alerts():
         data_f = pd.DataFrame.from_dict(rows)
 
     return data_f
-
-
-def get_all_alerts():
-    """Returns alert data as DataFrame from database."""
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute("""SET timezone='Europe/London'""")
-        cur.execute("""SELECT SL.severity_level as "Severity", 
-                    L.loc_name, AL.name as "Alert type", L.latitude, L.longitude, 
-                    L.loc_name as "Location", C.name as "County", CO.name as "Country",
-                    F.forecast_timestamp as "Forecast time"
-                    FROM weather_alert AS WA
-                    JOIN severity_level AS SL ON (WA.severity_level_id = SL.severity_level_id)
-                    JOIN forecast AS F ON (WA.forecast_id = F.forecast_id)
-                    JOIN alert_type AS AL ON (WA.alert_type_id = AL.alert_type_id)
-                    JOIN weather_report AS WR ON (F.weather_report_id = WR.weather_report_id)
-                    JOIN location AS L ON (WR.loc_id = L.loc_id)
-                    JOIN county AS C ON (L.county_id = C.county_id)
-                    JOIN country as CO ON (C.country_id = CO.country_id)
-                    GROUP BY L.latitude, L.longitude, "Location", "County", "Country", "Forecast time", "Severity", "Alert type"
-                    ORDER BY "Forecast time"
-                    ;""")
-
-        rows = cur.fetchall()
-        data_f = pd.DataFrame.from_dict(rows)
-
-    return data_f
-
-
-def uk_map(loc_data, lat, lon, tooltips):
-    """Generates a uk map of where the locations."""
-    # Load GeoJSON data
-    countries = alt.topo_feature(data.world_110m.url, 'countries')
-
-    background = alt.Chart(countries).mark_geoshape(
-        fill='lightgray',
-        stroke='white',
-        tooltip=None
-    ).project(
-        type='mercator',
-        scale=1500,                          # Magnify
-        center=[-2, 54],                     # [lon, lat]
-        clipExtent=[[0, 0], [500, 500]],    # [[left, top], [right, bottom]]
-    ).properties(
-        width=500,
-        height=500
-    )
-    points = alt.Chart(loc_data).mark_circle(color='red').encode(
-        latitude='latitude:Q',
-        longitude='longitude:Q',
-        size=alt.value(20),
-        tooltip=tooltips
-    ).project(
-        type='mercator',
-        scale=1500,                          # Magnify
-        center=[-2, 54],                     # [lon, lat]
-        clipExtent=[[0, 0], [500, 500]],    # [[left, top], [right, bottom]]
-    ).properties(
-        width=500,
-        height=500
-    )
-    return alt.layer(background, points).properties(title='Location map')
 
 
 def get_map(loc_data, lat, lon, location_type):
