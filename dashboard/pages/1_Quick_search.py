@@ -109,7 +109,7 @@ def get_map(loc_data, lat, lon):
                 get_position="[longitude, latitude]",
                 get_color='[200, 30, 0, 160]',
                 get_text="location",
-                get_radius=5000,
+                get_radius=200,
                 pickable=True
             ),
         ],
