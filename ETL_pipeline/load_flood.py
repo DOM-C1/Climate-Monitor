@@ -137,7 +137,3 @@ def insert_all_floods(config: dict, floods: list[dict]) -> None:
     with get_db_connection(config) as conn:
         for flood in floods:
             insert_flood(conn, flood)
-
-
-load_dotenv()
-insert_all_floods(ENV, get_all_floods())
