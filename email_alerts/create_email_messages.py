@@ -32,12 +32,12 @@ def get_alert_visual(alert):
     return ''
 
 
-def create_html_table_weather(user_alerts: list[list[str]]) -> str:
+def create_html_table_weather(user_alerts: list[list[str]], weather_alert: str) -> str:
     """creates an html table for weather warnings in an area."""
 
-    weather_alert = ENV['WEATHER_WARNING_TABLE']
     table_style = "'border: 1px solid  black;text-align: left;padding: 8px;'"""
 
+    output = ''
     table = """<table style=
     border-collapse: collapse;
     padding: 2rem 0.5rem;
@@ -48,21 +48,22 @@ def create_html_table_weather(user_alerts: list[list[str]]) -> str:
         if alert[0] != weather_alert:
             continue
         alert_msg = get_alert_msg(alert[2], alert[5])
-        table += f"""<tr>
+        output += f"""<tr>
         <td style='border: 1px solid  black;text-align: left;padding: 8px;
         background-color: {get_alert_visual(alert[2])}; font-size: 30px;'>!</td>
         <td style={table_style}>{alert_msg} {alert[-1]}</td>
         <td style={table_style}>{alert[3]}</td>
         <td style={table_style}>{alert[6].strftime("%H:%M:%S")}</td>
         </tr>"""
-    table += "</table>"
+    if not output:
+        return ""
+    table += output + "</table>"
     return table
 
 
-def create_html_air_quality(user_alerts: list[list[str]]) -> str:
+def create_html_air_quality(user_alerts: list[list[str]], air_quality: str) -> str:
     """creates the html message for air quality in the area."""
 
-    air_quality = ENV['AIR_QUALITY_TABLE']
     html_string = """"""
     for alert in user_alerts:
         if alert[0] != air_quality:
@@ -78,10 +79,9 @@ def create_html_air_quality(user_alerts: list[list[str]]) -> str:
     return html_string
 
 
-def create_html_flood_alerts(user_alerts: list[list[str]]) -> str:
+def create_html_flood_alerts(user_alerts: list[list[str]], flood_alert: str) -> str:
     """Create the html message for flood warnings in an area."""
 
-    flood_alert = ENV['FLOOD_WARNING_TABLE']
     html_string = """"""
     for alert in user_alerts:
         if alert[0] != flood_alert:
@@ -97,7 +97,7 @@ def create_html_flood_alerts(user_alerts: list[list[str]]) -> str:
     return html_string
 
 
-def create_full_html_per_user(users_weather: list[list]) -> str:
+def create_full_html_per_user(users_weather: list[list], tables: list[str]) -> str:
     """Creates a html message based on a user's weather alerts."""
 
     html_msg = """<!DOCTYPE html>
@@ -108,9 +108,12 @@ def create_full_html_per_user(users_weather: list[list]) -> str:
     </head><body style=''font-family: arial, sans-serif; background-color:
     white; justify-content: center;align-items: center;'>
     <h1>!!!!!Weather Alerts!!!!!</h1>"""
-    weather_alerts_data = create_html_table_weather(users_weather)
-    air_quality_data = create_html_air_quality(users_weather)
-    flood_warning_data = create_html_flood_alerts(users_weather)
+    weather_alerts_data = create_html_table_weather(users_weather, tables[0])
+    air_quality_data = create_html_air_quality(users_weather, tables[1])
+    flood_warning_data = create_html_flood_alerts(users_weather, tables[2])
+
+    if not weather_alerts_data and not air_quality_data and not flood_warning_data:
+        return ''
 
     html_msg += air_quality_data + flood_warning_data + weather_alerts_data
     html_msg += """</body>"""
@@ -118,10 +121,11 @@ def create_full_html_per_user(users_weather: list[list]) -> str:
     return html_msg
 
 
-def assign_messages_to_recipients(recipients: dict) -> dict:
+def assign_messages_to_recipients(recipients: dict, tables: list[str]) -> dict:
     """create a new dict with the html messages as values."""
     html_messages = {}
     for key in recipients.keys():
-        html_messages[key] = create_full_html_per_user(recipients.get(key))
+        html_messages[key] = create_full_html_per_user(
+            recipients.get(key), tables)
 
     return html_messages

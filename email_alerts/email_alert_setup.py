@@ -85,7 +85,7 @@ def select_weather_warnings(conn: connection) -> list[list]:
     JOIN county AS C ON (L.county_id = C.county_id)
     LEFT JOIN user_location_assignment AS ULA ON (L.loc_id = ULA.loc_id)
     JOIN user_details AS UD ON (ULA.user_id = UD.user_id)
-    WHERE WA.notified = FALSE;"""
+    WHERE WA.notified = FALSE"""
 
     rows = []
     with conn.cursor() as cur:
@@ -157,7 +157,7 @@ def remove_unnecessary_weather_data(warning: list[str]) -> list[str]:
     return data
 
 
-def sort_warnings_to_email(emails: list[str], warnings: list[tuple[str]]) -> dict:
+def sort_warnings_to_email(emails: list[str], warnings: list[list[str]]) -> dict:
     """Creates a dictionary of the emails and all the alerts associated with each."""
 
     emails = emails_to_dict(emails)
@@ -171,19 +171,16 @@ def sort_warnings_to_email(emails: list[str], warnings: list[tuple[str]]) -> dic
     return emails
 
 
-def set_up_email_data(config) -> dict:
+def set_up_email_data(config: dict, tables: list[str]) -> dict:
     """Returns a dictionary of all the email recipients and their respective alerts."""
-    weather_alert = ENV['WEATHER_WARNING_TABLE']
-    flood_alert = ENV['FLOOD_WARNING_TABLE']
-    air_quality = ENV['AIR_QUALITY_TABLE']
     with get_db_connection(config) as conn:
         emails = select_email_list(conn)
         floods = select_flood_warnings(conn)
         weather = select_weather_warnings(conn)
         air = select_air_warnings(conn)
-        warnings = [[flood_alert] + f for f in floods]
-        warnings += [[weather_alert] + w for w in weather]
-        warnings += [[air_quality] + a for a in air]
+        warnings = [[tables[-1]] + f for f in floods]
+        warnings += [[tables[0]] + w for w in weather]
+        warnings += [[tables[1]] + a for a in air]
     return sort_warnings_to_email(emails, warnings)
 
 

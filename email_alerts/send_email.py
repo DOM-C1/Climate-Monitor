@@ -36,22 +36,28 @@ def send_email(email: str, message: str):
             Source=from_email,
         )
     except ClientError as error:
-        print("Error sending email:", error.response['Error']['Message'])
+        print("Could not send email:", error.response['Error']['Message'])
     else:
         print("Email sent! Message ID:", response['MessageId'])
 
 
-def send_to_each_recipient(config: dict) -> None:
+def send_to_each_recipient(config: dict, tables: list[str]) -> None:
     """Gets all the alert information, sorts it and then sends it to all the recipients.
     The function then updates the respective rows to show that the warning has been notified."""
 
-    recipients_alerts = set_up_email_data(config)
-    recipients_msg = assign_messages_to_recipients(recipients_alerts)
+    recipients_alerts = set_up_email_data(config, tables)
+    recipients_msg = assign_messages_to_recipients(recipients_alerts, tables)
     for key in recipients_msg:
+        if not recipients_msg.get(key):
+            continue
         send_email(key, recipients_msg.get(key))
     update_all_alert_tables(config, recipients_alerts)
 
 
 if __name__ == '__main__':
     load_dotenv()
-    send_to_each_recipient(ENV)
+    flood_alert = ENV['FLOOD_WARNING_TABLE']
+    air_quality = ENV['AIR_QUALITY_TABLE']
+    weather_alert = ENV['WEATHER_WARNING_TABLE']
+
+    send_to_each_recipient(ENV, [weather_alert, air_quality, flood_alert])
