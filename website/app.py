@@ -13,7 +13,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def homepage():
-    """This displays the homepage"""
+    """This displays the homepage."""
     return render_template('newsletter.html')
 
 
@@ -29,7 +29,7 @@ def submit_user():
         return render_template('user_not_found.html')
 
     if details['status'] != 200:
-        return render_template('cant_be_found_page.html')
+        return render_template('page_not_found.html')
     alert_on = get_value_from_db(
         'user_location_assignment', 'alert_opt_in', user_id, 'user_id', conn)
     report_on = get_value_from_db(
