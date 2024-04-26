@@ -169,7 +169,7 @@ def get_weather_alerts(weather_data: pd.DataFrame) -> pd.DataFrame:
 def gather_data_from_json(json_data: dict, key: str) -> list[dict]:
     """Obtain transformed forecast data from hourly or 15-minutely data."""
     data = pd.DataFrame(json_data[key])
-    data = data.map(lambda x: 0 if x is None or x == 'null' else x)
+    data['lightning_potential'] = data['lightning_potential'].fillna(0)
     data = rename_columns(data)
     data = change_data_types(data)
     alerts = get_weather_alerts(data)
