@@ -11,7 +11,6 @@ def get_details_from_post_code(postcode: str) -> dict:
 
 def get_long_lat(details: dict) -> tuple:
     """Given a dictioanry, find the longitude and latitude in that order."""
-    print('a')
     return (details['result']['longitude'], details['result']['latitude'])
 
 

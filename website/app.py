@@ -62,7 +62,7 @@ def submit_location():
                             sub_newsletter, sub_alerts, conn)
         return 'User Added!'
     else:
-        return render_template('cant_be_found_page.html')
+        return render_template('location_not_found.html')
 
 
 if __name__ == '__main__':
