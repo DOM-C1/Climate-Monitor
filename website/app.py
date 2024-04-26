@@ -1,10 +1,11 @@
-"""This app loads the webpage and acts as an API for the RDS datanase."""
+"""This app loads the webpage and acts as an API for the RDS."""
 from os import environ as ENV
 
 from dotenv import load_dotenv
 from flask import Flask, request, render_template
 
-from utils import get_long_lat, get_location_name, add_to_databse, get_df, get_db_connection
+from utils import get_details_from_post_code
+from utils_db import get_db_connection, get_id, setup_user_location, get_value_from_db
 
 
 app = Flask(__name__)
@@ -12,19 +13,31 @@ app = Flask(__name__)
 
 @app.route('/')
 def homepage():
-    """This displays the homepage"""
+    """This displays the homepage."""
     return render_template('newsletter.html')
 
 
-@app.route('/submit-email', methods=['POST'])
-def submit_user(conn):
-    """When a request is sent, the user name and email is parsed and uploaded
-    to the database."""
+@app.route('/submit-location', methods=['POST'])
+def submit_user():
+    """When a request is sent, the users new location is sent to the database."""
     email = request.form['email']
-    name = request.form['name']
+    postcode = request.form['postcode']
+    details = get_details_from_post_code(postcode)
     conn = get_db_connection(ENV)
-    add_to_databse('user', (name, email), conn)
-    return f"Thank you {name} your email {email} has been added to the database! "
+    user_id = get_id('user_details', 'email', email, conn)
+    if user_id == -1:
+        return render_template('user_not_found.html')
+
+    if details['status'] != 200:
+        return render_template('page_not_found.html')
+    alert_on = get_value_from_db(
+        'user_location_assignment', 'alert_opt_in', user_id, 'user_id', conn)
+    report_on = get_value_from_db(
+        'user_location_assignment', 'report_opt_in', user_id, 'user_id', conn)
+    name = get_value_from_db(
+        'user_details', 'name', user_id, 'user_id', conn)
+    setup_user_location(details, name, email, report_on, alert_on, conn)
+    return 'Location added!'
 
 
 @app.route('/location')
@@ -33,21 +46,25 @@ def location_page():
     return render_template('location_form.html')
 
 
-@app.route('/submit-location', methods=['POST'])
+@app.route('/submit-user', methods=['POST'])
 def submit_location():
-    """When users submit a location, the information gets directed here, where it
-    get parsed and uploaded."""
-    df = get_df()
-    location_type = request.form['locationType']
-    location_value = request.form[location_type]
-    if location_type == 'postcode':
-        longitude, latitude = get_long_lat(location_value.upper(), df)
-        location_name = get_location_name(location_value.upper(), df)
-        conn = get_db_connection(ENV)
-        add_to_databse('location', (location_name, longitude, latitude), conn)
-    return f"Location submitted: {location_type} - {location_value}"
+    """When a user signs-up, it gets sent through here and uploaded
+       to the database."""
+    location_value = request.form['location']
+    name = request.form['name']
+    email = request.form['email']
+    sub_newsletter = request.form.get('newsletter', 'off') == 'on'
+    sub_alerts = request.form.get('alerts', 'off') == 'on'
+    details = get_details_from_post_code(location_value)
+    conn = get_db_connection(ENV)
+    if details['status'] == 200:
+        setup_user_location(details, name, email,
+                            sub_newsletter, sub_alerts, conn)
+        return 'User Added!'
+    else:
+        return render_template('cant_be_found_page.html')
 
 
 if __name__ == '__main__':
     load_dotenv()
-    app.run(debug=True)
+    app.run(host='0.0.0.0')
