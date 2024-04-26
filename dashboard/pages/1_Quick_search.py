@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from os import environ as ENV
 
 import altair as alt
@@ -46,7 +46,9 @@ def get_location_forecast_data(conn) -> pd.DataFrame:
                     ON (f.weather_report_id=w.weather_report_id)
                     JOIN weather_code as wc
                     ON (f.weather_code_id=wc.weather_code_id)
-                    WHERE EXTRACT(minutes from F.forecast_timestamp) = 0
+                    WHERE F.forecast_timestamp < NOW() + interval '12 hours'
+                    AND EXTRACT(minutes from F.forecast_timestamp) = 0
+                    AND EXTRACT(hours from F.forecast_timestamp) % 2 = 0
                     GROUP BY "Forecast time", l.loc_id, "County", "Country", "Weather"
                     """)
 
@@ -102,22 +104,12 @@ def get_map(loc_data, lat, lon):
         ),
         layers=[
             pdk.Layer(
-                'HexagonLayer',
-                data=loc_data,
-                get_position="[latitude, longitude]",
-                radius=200,
-                elevation_scale=4,
-                elevation_range=[0, 1000],
-                pickable=True,
-                extruded=True,
-            ),
-            pdk.Layer(
                 'ScatterplotLayer',
                 data=loc_data,
                 get_position="[longitude, latitude]",
                 get_color='[200, 30, 0, 160]',
                 get_text="location",
-                get_radius=200,
+                get_radius=5000,
                 pickable=True
             ),
         ],
@@ -134,14 +126,19 @@ if __name__ == "__main__":
         location = st.selectbox('Locations',
                                 ['Select a location...'] + list(forecast_d['Location'].sort_values().unique()))
         if location != 'Select a location...':
-            lat, lon, county = forecast_d[forecast_d['Location'] == location][[
-                'latitude', 'longitude', 'County']].values[0]
             print(forecast_d)
-            forecast_d = forecast_d[forecast_d['County'] ==
-                                    county][forecast_d['Forecast time'] == time_rounder(datetime.now())]
-            print(forecast_d)
+            print(location)
+            lat, lon = forecast_d[forecast_d['Location'] ==
+                                  location][['latitude', 'longitude']].values[0]
             w_map = get_map(forecast_d, lat, lon)
-        elif location != 'Select a location...':
-            st.warning('No location selected!')
+            forecast_d = forecast_d[forecast_d['Location'] == location]
+            lat, lon = forecast_d[['latitude', 'longitude']].values[0]
+            forecast_d = forecast_d
+            st.markdown("# Today's forecast")
+            st.write("average temp, modal weather code, etc.")
+            st.write(forecast_d)
+            st.markdown("# This week's forecast")
+            st.write(forecast_d)
+            w_map = get_map(forecast_d, lat, lon)
         else:
-            st.warning('Please pick a location and time!')
+            st.write('Please pick a location!')

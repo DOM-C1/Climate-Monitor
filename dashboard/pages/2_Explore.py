@@ -68,6 +68,7 @@ def get_locations_with_alerts():
                     JOIN weather_report AS WR ON (F.weather_report_id = WR.weather_report_id)
                     JOIN location AS L ON (WR.loc_id = L.loc_id)
                     WHERE SL.severity_level_id != 4
+                    AND F.forecast_timestamp > NOW()
                     GROUP BY L.loc_id, "Alert type", "Severity", SL.severity_level_id
                     ORDER BY SL.severity_level_id DESC, L.loc_id ASC
                     ;""")
