@@ -1,0 +1,4 @@
+1, Severe Warning
+2, Warning
+3, Alert
+4, Warning no longer in force

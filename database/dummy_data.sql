@@ -10,7 +10,7 @@ INSERT INTO user_details (
 INSERT INTO user_location_assignment(
     user_id, loc_id, report_opt_in, alert_opt_in
 ) VALUES (
-    1, 12, True, True
+    1, 7, True, True
 ), (2, 1, True, True);
 
 INSERT INTO weather_report(
