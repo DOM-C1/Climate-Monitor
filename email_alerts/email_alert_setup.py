@@ -1,12 +1,11 @@
+"""Sets up the data for emailing out weather, air quality and flood alerts"""
 
 from os import environ as ENV
 
-import pandas as pd
 from psycopg2 import connect
 from psycopg2.extras import RealDictCursor
 from psycopg2.extensions import connection
 from psycopg2.errors import ConnectionException
-from geopy.geocoders import Nominatim
 from dotenv import load_dotenv
 
 

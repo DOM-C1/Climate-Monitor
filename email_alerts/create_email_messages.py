@@ -59,6 +59,8 @@ def create_html_air_quality(user_alerts: list[list[str]]) -> str:
     for alert in user_alerts:
         if alert[0] != 'air_quality':
             continue
+        if alert[2] == 'Warning no longer in force':
+            continue
         air_warning = """<h3><span style='border: 1px solid  black; background-color: {}; text-align: center; font-size: 35px;
         display: inline-block; width:20px;'>!</span> {} in {}</h3>"""
         air_warning = air_warning.format(get_alert_visual(alert[2]), get_alert_msg(
@@ -73,6 +75,8 @@ def create_html_flood_alerts(user_alerts: list[list[str]]) -> str:
     html_string = """"""
     for alert in user_alerts:
         if alert[0] != 'flood_warnings':
+            continue
+        if alert[2] == 'Warning no longer in force':
             continue
         flood_alert = """<h3><span style='border: 1px solid  black; background-color: {}; text-align: center; font-size: 35px;
         display: inline-block; width:20px;'>!</span> {} in {} - {}</h3>"""
