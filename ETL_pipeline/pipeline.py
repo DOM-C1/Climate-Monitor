@@ -37,11 +37,3 @@ def handler(event: list[dict], context: dict = None) -> None:
 
     for e in event:
         pipeline(e["latitude"], e["longitude"])
-
-
-if __name__ == "__main__":
-
-    longitude = -2.99168
-    latitude = 53.4071991
-
-    pipeline(latitude, longitude)
