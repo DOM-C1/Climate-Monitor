@@ -1,14 +1,9 @@
 """Create and host a streamlit dashboard"""
 
 import streamlit as st
-import pandas as pd
-import altair as alt
-
-from urllib.error import URLError
 
 
 def intro():
-    import streamlit as st
 
     st.write("# Welcome to the Climate Monitor! :sun_small_cloud:")
 
