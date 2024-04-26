@@ -3,9 +3,7 @@
 from os import environ as ENV
 
 from psycopg2 import connect
-from psycopg2.extras import RealDictCursor
 from psycopg2.extensions import connection
-from psycopg2.errors import ConnectionException
 from dotenv import load_dotenv
 
 
@@ -21,6 +19,7 @@ def get_db_connection(config: dict):
 
 
 def select_email_list(conn: connection) -> list:
+    """gets the list of emails that should all be receiving an alert"""
 
     sql_query = """
     SELECT UD.email 
@@ -32,7 +31,8 @@ def select_email_list(conn: connection) -> list:
     LEFT JOIN forecast AS F ON (WR.weather_report_id = F.weather_report_id)
     LEFT JOIN weather_alert AS WA ON (F.forecast_id = WA.forecast_id)
     LEFT JOIN air_quality AS AQ ON (WR.weather_report_id = AQ.weather_report_id)
-    WHERE (FW.notified = FALSE or WA.notified = FALSE or AQ.notified = FALSE) and ULA.alert_opt_in = TRUE;"""
+    WHERE (FW.notified = FALSE or WA.notified = FALSE or AQ.notified = FALSE) 
+    and ULA.alert_opt_in = TRUE;"""
 
     rows = []
 
@@ -48,7 +48,8 @@ def select_flood_warnings(conn: connection) -> list[list]:
     """selects data from the database relating to flood alerts per user.
     The data is returned as a list of lists"""
 
-    sql_query = """SELECT FW.flood_id, SL.severity_level, L.loc_name, C.name, FW.time_raised, UD.email
+    sql_query = """SELECT FW.flood_id, SL.severity_level,
+    L.loc_name, C.name, FW.time_raised, UD.email
     FROM flood_warnings AS FW
     JOIN severity_level AS SL ON (FW.severity_level_id = SL.severity_level_id)
     JOIN location AS L ON (FW.loc_id = L.loc_id)
@@ -70,7 +71,7 @@ def select_weather_warnings(conn: connection) -> list[list]:
     """selects data from the database relating to weather alerts per user.
     The data is returned as a list of lists"""
 
-    sql_query = """SELECT WA.alert_id, SL.severity_level, L.loc_name, C.name, AL.name, 
+    sql_query = """SELECT WA.alert_id, SL.severity_level, L.loc_name, C.name, AL.name,
     F.forecast_timestamp, WC.description, WR.report_time, 
     F.temperature, F.apparent_temp, F.wind_speed, F.wind_gusts, 
     F.lightning_potential, F.snowfall, F.visibility, F.uv_index, F.rainfall, UD.email
@@ -99,7 +100,7 @@ def select_air_warnings(conn: connection) -> list[list]:
     """selects data from the database relating to air quality alerts per user.
     The data is returned as a list of lists"""
 
-    sql_query = """SELECT AQ.air_quality_id, 
+    sql_query = """SELECT AQ.air_quality_id,
     SL.severity_level, L.loc_name, C.name,
     AQ.o3_concentration, UD.email
     FROM air_quality AS AQ
@@ -109,7 +110,7 @@ def select_air_warnings(conn: connection) -> list[list]:
     JOIN county AS C ON (L.county_id = C.county_id)
     LEFT JOIN user_location_assignment AS ULA ON (L.loc_id = ULA.loc_id)
     JOIN user_details AS UD ON (ULA.user_id = UD.user_id)
-    WHERE AQ.notified = FALSE;"""
+    WHERE AQ.notified = FALSE and NOT AQ.severity_level_id = 4;"""
 
     rows = []
     with conn.cursor() as cur:
@@ -138,21 +139,22 @@ def remove_unnecessary_weather_data(warning: list[str]) -> list[str]:
         return warning[:-1]
 
     alert_type = warning[5]
-    static_data = warning[:9]
+    data = warning[:9]
     if alert_type == 'Wind':
-        return static_data + warning[11:13] + ['&#x1F32C;']
-    if alert_type == 'Heat' or alert_type == 'Ice':
-        return static_data + warning[9:11] + ['&#x1F321;']
+        data += warning[11:13] + ['&#x1F32C;']
+    if alert_type in ['Heat', 'Ice']:
+        data += warning[9:11] + ['&#x1F321;']
     if alert_type == 'Lightning':
-        return static_data + [warning[13]] + ['&#x26A1;']
+        data += [warning[13]] + ['&#x26A1;']
     if alert_type == 'Snowfall':
-        return static_data + [warning[14]] + ['&#x1F328;']
+        data += [warning[14]] + ['&#x1F328;']
     if alert_type == 'Visibility':
-        return static_data + [warning[15]] + ['&#x1F32B;']
+        data += [warning[15]] + ['&#x1F32B;']
     if alert_type == 'UV-index':
-        return static_data + [warning[16]] + ['&#x1F506;']
+        data += [warning[16]] + ['&#x1F506;']
     if alert_type == 'Rain':
-        return static_data + [warning[17]] + ['&#x1F327;']
+        data += [warning[17]] + ['&#x1F327;']
+    return data
 
 
 def sort_warnings_to_email(emails: list[str], warnings: list[tuple[str]]) -> dict:
@@ -161,7 +163,7 @@ def sort_warnings_to_email(emails: list[str], warnings: list[tuple[str]]) -> dic
     emails = emails_to_dict(emails)
     for warning in warnings:
         email = warning[-1]
-        if email not in emails.keys():
+        if email not in emails:
             continue
 
         emails[email] += [remove_unnecessary_weather_data(warning)]
@@ -171,14 +173,17 @@ def sort_warnings_to_email(emails: list[str], warnings: list[tuple[str]]) -> dic
 
 def set_up_email_data(config) -> dict:
     """Returns a dictionary of all the email recipients and their respective alerts."""
+    weather_alert = ENV['WEATHER_WARNING_TABLE']
+    flood_alert = ENV['FLOOD_WARNING_TABLE']
+    air_quality = ENV['AIR_QUALITY_TABLE']
     with get_db_connection(config) as conn:
         emails = select_email_list(conn)
         floods = select_flood_warnings(conn)
         weather = select_weather_warnings(conn)
         air = select_air_warnings(conn)
-        warnings = [['flood_warnings'] + f for f in floods]
-        warnings += [['weather_alert'] + w for w in weather]
-        warnings += [['air_quality'] + a for a in air]
+        warnings = [[flood_alert] + f for f in floods]
+        warnings += [[weather_alert] + w for w in weather]
+        warnings += [[air_quality] + a for a in air]
     return sort_warnings_to_email(emails, warnings)
 
 
