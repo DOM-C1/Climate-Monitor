@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error 400 - We found the location but it does not seem to be in the UK.</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            padding: 50px;
+        }
+        .error-container {
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+        }
+        .error-code {
+            font-size: 36px;
+            font-weight: bold;  
+        }
+        .error-message {
+            font-size: 24px;
+            color: #333;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            margin-top: 30px;
+        }
+      
+    </style>
+</head>
+<body>
+
+<div class="error-container">
+    <div class="error-code">ERROR 400</div>
+    <div class="error-message">We found the location but it does not seem to be in the UK</div>
+    <img src="{{ url_for('static', filename='thinking_cat.jpg') }}" alt="Your Image">
+
+</div>
+
+</body>
+</html>
