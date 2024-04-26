@@ -1,4 +1,4 @@
-
+from datetime import datetime
 from os import environ as ENV
 
 import altair as alt
@@ -22,12 +22,19 @@ def connect_to_db(config):
     )
 
 
+def time_rounder(timestamp: datetime, get_fifteen: bool = True) -> datetime:
+    """Obtains the most recent 15 min time, or the most recent hour"""
+    if get_fifteen:
+        return (timestamp.replace(second=0, microsecond=0, minute=(timestamp.minute // 15 * 15)))
+    return (timestamp.replace(second=0, microsecond=0, minute=0))
+
+
 def get_location_forecast_data(conn) -> pd.DataFrame:
     """Returns location data as DataFrame from database."""
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""SET timezone='Europe/London'""")
-        cur.execute(f"""SELECT l.latitude, l.longitude, l.loc_name as Location, c.name as County, co.name as Country,
-                    f.forecast_timestamp as forecast_time, wc.description as weather
+        cur.execute(f"""SELECT l.latitude, l.longitude, l.loc_name as "Location", c.name as "County", co.name as "Country",
+                    f.forecast_timestamp as "Forecast time", wc.description as "Weather"
                     FROM location AS l
                     JOIN county as c
                     ON (l.county_id=c.county_id)
@@ -39,8 +46,8 @@ def get_location_forecast_data(conn) -> pd.DataFrame:
                     ON (f.weather_report_id=w.weather_report_id)
                     JOIN weather_code as wc
                     ON (f.weather_code_id=wc.weather_code_id)
-                    WHERE f.forecast_timestamp > NOW()
-                    GROUP BY forecast_time, l.loc_id, County, Country, weather
+                    WHERE EXTRACT(minutes from F.forecast_timestamp) = 0
+                    GROUP BY "Forecast time", l.loc_id, "County", "Country", "Weather"
                     """)
 
         rows = cur.fetchall()
@@ -114,27 +121,26 @@ def get_map(loc_data, lat, lon):
                 pickable=True
             ),
         ],
-        tooltip={'html': '<b>Weather:</b> {weather}\
-                 <b>Location:</b> {location}',
+        tooltip={'html': '<b>Weather:</b> {Weather}\
+                 <b>Location:</b> {Location}',
                  'style': {"backgroundColor": "navyblue", 'color': '#87CEEB', 'font-size': '100%'}}))
 
 
 if __name__ == "__main__":
     load_dotenv()
+    st.title('Quick Search')
     with connect_to_db(ENV) as conn:
         forecast_d = get_location_forecast_data(conn)
         location = st.selectbox('Locations',
-                                ['Select a location...'] + list(forecast_d['location'].sort_values().unique()))
-        time_forecast = st.selectbox('Time',
-                                     ['Select a time...'] + list(forecast_d['forecast_time'].sort_values().unique()))
-        if location != 'Select a location...' and time_forecast != 'Select a time...':
-            lat, lon, county = forecast_d[forecast_d['location'] == location][[
-                'latitude', 'longitude', 'county']].values[0]
-            forecast_d = forecast_d[forecast_d['county'] ==
-                                    county][forecast_d['forecast_time'] == time_forecast]
+                                ['Select a location...'] + list(forecast_d['Location'].sort_values().unique()))
+        if location != 'Select a location...':
+            lat, lon, county = forecast_d[forecast_d['Location'] == location][[
+                'latitude', 'longitude', 'County']].values[0]
+            print(forecast_d)
+            forecast_d = forecast_d[forecast_d['County'] ==
+                                    county][forecast_d['Forecast time'] == time_rounder(datetime.now())]
+            print(forecast_d)
             w_map = get_map(forecast_d, lat, lon)
-        elif time_forecast != 'Select a time...':
-            st.warning('No location selected!')
         elif location != 'Select a location...':
             st.warning('No location selected!')
         else:
