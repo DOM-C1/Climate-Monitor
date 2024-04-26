@@ -1,12 +1,8 @@
- 
 FROM python:latest
 
-COPY static .   
-COPY app.py .
-COPY templates .
-COPY utils.py .
-COPY utils_db.py .
-COPY requirements.txt .
+WORKDIR /app
+
+COPY . /app
 
 RUN pip install -r requirements.txt
 

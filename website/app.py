@@ -56,13 +56,15 @@ def submit_location():
     sub_newsletter = request.form.get('newsletter', 'off') == 'on'
     sub_alerts = request.form.get('alerts', 'off') == 'on'
     details = get_details_from_post_code(location_value)
-    conn = get_db_connection()
+    conn = get_db_connection(ENV)
     if details['status'] == 200:
         setup_user_location(details, name, email,
                             sub_newsletter, sub_alerts, conn)
-    return render_template('cant_be_found_page.html')
+        return 'User Added!'
+    else:
+        return render_template('cant_be_found_page.html')
 
 
 if __name__ == '__main__':
     load_dotenv()
-    app.run(debug=True)
+    app.run(host='0.0.0.0')

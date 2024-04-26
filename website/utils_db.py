@@ -24,7 +24,7 @@ def add_to_database(table: str, data: dict, conn: connect) -> None:
     with conn.cursor() as cur:
         cur.execute(query, values)
         conn.commit()
-    return
+    return None
 
 
 def get_id(table: str, column: str, value: str, conn: connect) -> int:
@@ -54,7 +54,7 @@ def get_loc_id(longitude: float, latitude: float, conn: connect) -> int:
     return -1
 
 
-def setup_user_location(details, name, email, sub_newsletter, sub_alerts, conn) -> None:
+def setup_user_location(details, name, email, sub_newsletter, sub_alerts, conn) -> str:
     """This sets up location tracking for a user, if the user exists then it just adds a new
        location, otherwise, it sets up the new user too."""
     longitude, latitude = get_long_lat(details)
@@ -87,7 +87,7 @@ def setup_user_location(details, name, email, sub_newsletter, sub_alerts, conn) 
     add_to_database('user_location_assignment',
                     user_loc_data, conn)
     conn.close()
-    return
+    return ''
 
 
 def get_value_from_db(table: str, column: str, _id: str, id_name: str, conn) -> str:
