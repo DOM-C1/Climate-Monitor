@@ -1,36 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Location Submission</title>
-    <script>
-        function toggleInput(checked, id) {
-            document.getElementById(id).disabled = !checked;
-        }
-    </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add Location Form</title>
 </head>
 <body>
-    <h1>Submit Your Location</h1>
-    <form action="/submit-location" method="post">
-        <div>
-            <input type="radio" id="town" name="locationType" value="town" onclick="toggleInput(this.checked, 'townSelect'); toggleInput(false, 'postcodeInput');" required>
-            <label for="town">Town</label>
-            <select id="townSelect" name="town" disabled required>
-                <option value="">Select a town</option>
-                <option value="Town1">Town1</option>
-                <option value="Town2">Town2</option>
-                <option value="Town3">Town3</option>
-            </select>
-        </div>
-        <div>
-            <input type="radio" id="postcode" name="locationType" value="postcode" onclick="toggleInput(this.checked, 'postcodeInput'); toggleInput(false, 'townSelect');">
-            <label for="postcode">Postcode</label>
-            <input type="text" id="postcodeInput" name="postcode" disabled required>
-        </div>
-        <button type="submit">Submit</button>
-    </form>
+
+<h1>Add a location</h1>
+
+<form action="submit-location" method="POST">
+  <p>Already a user? Add a location below</p>
+
+  <label for="email">Email</label>
+  <input type="email" id="email" name="email" placeholder="Enter your email">
+
+  <label for="postcode">Location - postcode</label>
+  <input type="text" id="postcode" name="postcode" placeholder="Enter your postcode">
+  
+  <input type="submit" value="Submit">
+</form>
+
 </body>
 </html>
-
-
