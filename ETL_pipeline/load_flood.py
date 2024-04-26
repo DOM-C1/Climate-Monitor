@@ -94,7 +94,7 @@ def insert_location(conn: connection, latitude: float, longitude: float) -> int:
                             VALUES ({latitude}, {longitude}, '{location}', {county_id})
                             RETURNING loc_id""")
             conn.commit()
-            loc_id = cur.fetchone()["loc_id"]
+            loc_id = cur.fetchone()
         return loc_id
     return 0
 
