@@ -46,7 +46,7 @@ def chunk_locations(locations: list[dict], chunk_size: int = 100) -> list[list[d
             for i in range(0, len(locations), chunk_size)]
 
 
-def handler(event: dict = None, context: dict = None) -> dict:
+def handler(event: dict = None, context: dict = None) -> list[list[dict]]:
     """AWS Lambda function handler for chunking locations, returns
     JSON list of list of dictionaries."""
 
