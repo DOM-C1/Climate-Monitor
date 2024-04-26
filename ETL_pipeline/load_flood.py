@@ -1,5 +1,8 @@
 """Load flood warnings into the database"""
 
+from transform_flood import get_all_floods
+from dotenv import load_dotenv
+from os import environ as ENV
 from psycopg2 import connect
 from psycopg2.extras import RealDictCursor
 from psycopg2.extensions import connection
@@ -73,9 +76,9 @@ def insert_location(conn: connection, latitude: float, longitude: float) -> int:
     location, county, country = get_location_names(latitude, longitude)
     if country:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(f"""SELECT country_id FROM country
-                            WHERE name = '{country}'""")
-            country_id = cur.fetchone()[0]
+            cur.execute(
+                f"""SELECT country_id FROM country WHERE name = '{country}'""")
+            country_id = cur.fetchone()['country_id']
             cur.execute(f"""SELECT county_id FROM county
                             WHERE name = '{county}'
                             AND country_id = {country_id}""")
@@ -86,12 +89,12 @@ def insert_location(conn: connection, latitude: float, longitude: float) -> int:
                                 RETURNING county_id""")
                 conn.commit()
                 county_id = cur.fetchone()
-            county_id = county_id[0]
+            county_id = county_id['county_id']
             cur.execute(f"""INSERT INTO location (latitude, longitude, loc_name, county_id)
                             VALUES ({latitude}, {longitude}, '{location}', {county_id})
                             RETURNING loc_id""")
             conn.commit()
-            loc_id = cur.fetchone()
+            loc_id = cur.fetchone()["loc_id"]
         return loc_id
     return 0
 
@@ -106,7 +109,7 @@ def get_location_id(conn: connection, latitude: float, longitude: float) -> int:
     if not loc_id:
         loc_id = insert_location(conn, latitude, longitude)
     if loc_id:
-        return loc_id[0]
+        return loc_id["loc_id"]
     return 0
 
 
@@ -134,3 +137,7 @@ def insert_all_floods(config: dict, floods: list[dict]) -> None:
     with get_db_connection(config) as conn:
         for flood in floods:
             insert_flood(conn, flood)
+
+
+load_dotenv()
+insert_all_floods(ENV, get_all_floods())
