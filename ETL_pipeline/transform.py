@@ -124,9 +124,9 @@ def calculate_uv_alerts(uv_index: float) -> int:
     """Find extreme uv alerts amongst uv-index data."""
     if 7.5 <= uv_index:
         return 1
-    if 5.5 <= uv_index < 7.5:
+    if 6 <= uv_index < 7.5:
         return 2
-    if 2.5 <= uv_index < 5.5:
+    if 4.5 <= uv_index < 6:
         return 3
     return 4
 
