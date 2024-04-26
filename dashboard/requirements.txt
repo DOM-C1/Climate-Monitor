@@ -1,6 +1,0 @@
-python-dotenv
-pandas
-pymssql
-altair
-streamlit
-vega_datasets
