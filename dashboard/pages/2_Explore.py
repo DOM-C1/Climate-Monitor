@@ -67,11 +67,7 @@ def get_locations_with_alerts():
                     JOIN alert_type AS AL ON (WA.alert_type_id = AL.alert_type_id)
                     JOIN weather_report AS WR ON (F.weather_report_id = WR.weather_report_id)
                     JOIN location AS L ON (WR.loc_id = L.loc_id)
-                    WHERE SL.severity_level_id < 
-                    CASE WHEN AL.name = 'UV-index'
-                    THEN 3
-                    ELSE 4
-                    END
+                    WHERE SL.severity_level_id < 4
                     AND F.forecast_timestamp > NOW()
                     GROUP BY L.loc_id, "Alert type", "Severity", SL.severity_level_id
                     ORDER BY SL.severity_level_id DESC, L.loc_id ASC
@@ -86,10 +82,16 @@ def get_locations_with_alerts():
 def get_map(loc_data, lat, lon, location_type):
     if location_type == 'Location':
         zoom = 11
+        radius = 200
     elif location_type == 'County':
         zoom = 10
+        radius = 500
     elif location_type == 'Country':
         zoom = 6.5
+        radius = 3000
+    elif location_type == 'UK':
+        zoom = 5.2
+        radius = 3000
     st.pydeck_chart(pdk.Deck(
         map_style=None,
         initial_view_state=pdk.ViewState(
@@ -115,7 +117,7 @@ def get_map(loc_data, lat, lon, location_type):
                 get_position="[longitude, latitude]",
                 get_color='[200, 30, 0, 160]',
                 get_text="location",
-                get_radius=200,
+                get_radius=radius,
                 pickable=True
             ),
         ],
@@ -152,6 +154,7 @@ if __name__ == "__main__":
         w_map = get_map(forecast_d, lat, lon, loc_type)
     else:
         alerts = get_locations_with_alerts()
+        print(alerts)
         for _, alert in alerts.iterrows():
             if alert["Severity"] == "Alert":
                 icon = "❕"
@@ -159,5 +162,10 @@ if __name__ == "__main__":
                 icon = "⚠️"
             elif alert["Severity"] == "Severe Warning":
                 icon = "🚨"
-            st.warning(
-                f'**{alert["Location"]}** has a **{alert["Alert type"]} {alert["Severity"]}** from **{alert["min_time"]}** to **{alert["max_time"]}**', icon=icon)
+            if alert["min_time"] != alert["max_time"]:
+                st.warning(
+                    f'**{alert["Location"]}** has a **{alert["Alert type"]} {alert["Severity"]}** from **{alert["min_time"]}** to **{alert["max_time"]}**.', icon=icon)
+            else:
+                st.error(
+                    f'**{alert["Location"]}** has a **{alert["Alert type"]} {alert["Severity"]}** at **{alert["min_time"]}**.', icon=icon)
+        w_map = get_map(forecast_d, 52.536, -2.5341, 'UK')
