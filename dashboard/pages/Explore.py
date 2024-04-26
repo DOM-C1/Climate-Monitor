@@ -48,25 +48,20 @@ def get_location_forecast_data(conn) -> pd.DataFrame:
     return data_f
 
 
-if __name__ == "__main__":
-    load_dotenv()
-    with connect_to_db(ENV) as conn:
-        chart_data = get_location_forecast_data(conn)
-    print(chart_data)
-
+def interactive_map():
     st.pydeck_chart(pdk.Deck(
         map_style=None,
         initial_view_state=pdk.ViewState(
             latitude=53,
             longitude=0,
             zoom=6,
-            pitch=5,
+            pitch=50,
         ),
         layers=[
             pdk.Layer(
                 'HexagonLayer',
-                data=chart_data[['latitude', 'longitude']],
-                get_position='[lon, lat]',
+                data=chart_data,
+                get_position="[latitude, longitude]",
                 radius=700,
                 elevation_scale=4,
                 elevation_range=[0, 1000],
@@ -75,10 +70,21 @@ if __name__ == "__main__":
             ),
             pdk.Layer(
                 'ScatterplotLayer',
-                data=chart_data[['latitude', 'longitude']],
-                get_position='[lon, lat]',
+                data=chart_data,
+                get_position="[longitude, latitude]",
                 get_color='[200, 30, 0, 160]',
-                get_radius=500,
+                get_text="location",
+                get_radius=200,
+                pickable=True
             ),
         ],
-    ))
+        tooltip={'html': '<b>Weather:</b> {weather}\
+                 <b>Location:</b> {location}',
+                 'style': {"backgroundColor": "navyblue", 'color': '#87CEEB', 'font-size': '100%'}}))
+
+
+if __name__ == "__main__":
+    load_dotenv()
+    with connect_to_db(ENV) as conn:
+        chart_data = get_location_forecast_data(conn)
+    interactive_map()

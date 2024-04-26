@@ -9,6 +9,7 @@ from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 import streamlit as st
 from vega_datasets import data
+import pydeck as pdk
 
 
 def connect_to_db(config):
