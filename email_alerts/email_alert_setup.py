@@ -141,19 +141,19 @@ def remove_unnecessary_weather_data(warning: list[str]) -> list[str]:
     alert_type = warning[5]
     static_data = warning[:9]
     if alert_type == 'Wind':
-        return static_data + warning[11:13] + ['&#x1F32C']
+        return static_data + warning[11:13] + ['&#x1F32C;']
     if alert_type == 'Heat' or alert_type == 'Ice':
         return static_data + warning[9:11] + ['&#x1F321;']
     if alert_type == 'Lightning':
         return static_data + [warning[13]] + ['&#x26A1;']
     if alert_type == 'Snowfall':
-        return static_data + [warning[14]] + ['&#x1F328']
+        return static_data + [warning[14]] + ['&#x1F328;']
     if alert_type == 'Visibility':
-        return static_data + [warning[15]] + ['&#x1F32B']
+        return static_data + [warning[15]] + ['&#x1F32B;']
     if alert_type == 'UV-index':
-        return static_data + [warning[16]] + ['&#x1F506']
+        return static_data + [warning[16]] + ['&#x1F506;']
     if alert_type == 'Rain':
-        return static_data + [warning[17]] + ['&#x1F327']
+        return static_data + [warning[17]] + ['&#x1F327;']
 
 
 def sort_warnings_to_email(emails: list[str], warnings: list[tuple[str]]) -> dict:
