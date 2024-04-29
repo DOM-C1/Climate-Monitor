@@ -1,12 +1,15 @@
-from os import environ as ENV
+"""This file sends the daily report to users asynchronously."""
 import asyncio
-import aioboto3
-
-from dotenv import load_dotenv
-from boto3 import client
-import pandas as pd
-from psycopg2 import connect
 from datetime import datetime
+from os import environ as ENV
+
+import aioboto3
+import pandas as pd
+from boto3 import client
+from dotenv import load_dotenv
+from psycopg2 import connect
+
+
 WEATHER_EMOJIS = {
     "Clear Sky": "☀️",
     "Mainly Clear": "🌤",
@@ -39,23 +42,22 @@ WEATHER_EMOJIS = {
 }
 
 
-async def lambda_handler(event: dict = None, context: dict = None):
-    """Designed to be compatible with Lambda function, uses multithread"""
+def handler(event: dict = None, context: dict = None) -> None:
+    """This is designed to be compatible with the AWS Lambda function format."""
+    asyncio.run(main())
+
+
+async def main() -> None:
+    """Designed to asynchronously send emails."""
     load_dotenv()
-    conn = await get_db_connection(ENV)
-    df = await prepare_data_frame(conn)
-
-    async with aioboto3.client('ses', aws_access_key_id='AWS_KEY',
-                               aws_secret_access_key='AWS_SKEY',
-                               region_name='eu-west-2') as ses:
-        tasks = []
-        for email in df['email'].unique():
-            styled_html = await format_forecast_report(df, email)
-            task = asyncio.create_task(send_email(ses, styled_html, email))
-            tasks.append(task)
+    conn = get_db_connection(ENV)
+    df = prepare_data_frame(conn)
+    async with aioboto3.Session().client('ses', aws_access_key_id=ENV['AWS_KEY'],
+                                         aws_secret_access_key=ENV['AWS_SKEY'],
+                                         region_name='eu-west-2') as ses:
+        tasks = [asyncio.create_task(send_email(ses, await format_forecast_report(df, email), email))
+                 for email in df['email'].unique()]
         await asyncio.gather(*tasks)
-
-    print("All emails sent successfully.")
 
 
 def get_db_connection(config: dict) -> connect:
@@ -114,7 +116,7 @@ async def send_email(ses: client, html_content: str, recipient: str):
     try:
         response = await ses.send_email(
 
-            Source='Climate Control',
+            Source='trainee.dominic.chambers@sigmalabs.co.uk',
             Destination={'ToAddresses': [recipient]},
             Message={
                 'Subject': {'Data': 'Your Weather Forecast for the day'},
@@ -193,12 +195,3 @@ async def format_forecast_report(df: pd.DataFrame, target_email: str) -> str:
     </body>
     </html>
     """
-
-
-def get_ses_client(config: dict) -> client:
-    return client(
-        "ses",
-        aws_access_key_id=ENV["AWS_KEY"],
-        aws_secret_access_key=ENV["AWS_SKEY"],
-        region_name="eu-west-2",
-    )
