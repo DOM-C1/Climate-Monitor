@@ -48,7 +48,7 @@ def get_air_quality(latitude: float, longitude: float, config: dict) -> dict:
     return get(api_url, headers={'X-Api-Key': config['API_KEY']}, timeout=6)
 
 
-def extract(latitude: float, longitude: float, config: dict) -> dict:
+def async_api_calls(latitude: float, longitude: float, config: dict) -> dict:
     """Returns a dictionary of a JSON response for each request."""
 
     requests = [get_weather_details_for_week(latitude, longitude),
