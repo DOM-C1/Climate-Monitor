@@ -124,9 +124,9 @@ def calculate_uv_alerts(uv_index: float) -> int:
     """Find extreme uv alerts amongst uv-index data."""
     if 7.5 <= uv_index:
         return 1
-    if 5.5 <= uv_index < 7.5:
+    if 6 <= uv_index < 7.5:
         return 2
-    if 2.5 <= uv_index < 5.5:
+    if 4.5 <= uv_index < 6:
         return 3
     return 4
 
@@ -169,7 +169,7 @@ def get_weather_alerts(weather_data: pd.DataFrame) -> pd.DataFrame:
 def gather_data_from_json(json_data: dict, key: str) -> list[dict]:
     """Obtain transformed forecast data from hourly or 15-minutely data."""
     data = pd.DataFrame(json_data[key])
-    data = data.map(lambda x: 0 if x is None or x == 'null' else x)
+    data['lightning_potential'] = data['lightning_potential'].fillna(0)
     data = rename_columns(data)
     data = change_data_types(data)
     alerts = get_weather_alerts(data)
@@ -189,9 +189,10 @@ def gather_weather_data(latitude: float, longitude: float) -> list[dict]:
         gather_data_from_json(hourly_data, 'hourly')
 
 
-def gather_air_quality(latitude: float, longitude: float) -> dict:
+def gather_air_quality(latitude: float, longitude: float, config: dict) -> dict:
     """Obtain the o3 air quality for the weather report."""
-    concentration = get_air_quality(latitude, longitude)['O3']['concentration']
+    concentration = get_air_quality(latitude, longitude, config)[
+        'O3']['concentration']
     try:
         concentration = float(concentration)
     except ValueError:

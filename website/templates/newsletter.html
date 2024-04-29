@@ -3,16 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Subscribe to Newsletter</title>
+    <title>Sign Up for Our Newsletter</title>
+    <link rel="stylesheet" href="index.css"> <!-- Link to the CSS file -->
 </head>
 <body>
-    <h1>Subscribe to Our Newsletter</h1>
-    <form action="/submit-email" method="post">
-        <label for="name">Name:</label>
+
+<h1>Sign-up for our newsletter</h1>
+
+<form action="/submit-user" method="post">
+    <div>
+        <label for="name">Name</label>
         <input type="text" id="name" name="name" required>
-        <label for="email">Email:</label>
+    </div>
+    
+    <div>
+        <label for="email">Email</label>
         <input type="email" id="email" name="email" required>
-        <button type="submit">Subscribe</button>
-    </form>
+    </div>
+    
+    <div>
+        <label for="location">Location - Please enter your full postcode</label>
+        <input type="text" id="location" name="location" placeholder="e.g. AB12 3CD" required> <!-- Corrected syntax error -->
+    </div>
+    
+    <div>
+        <input type="checkbox" id="newsletter" name="newsletter">
+        <label for="newsletter">Sign-up for the newsletter</label>
+    </div>
+    
+    <div>
+        <input type="checkbox" id="alerts" name="alerts">
+        <label for="alerts">Sign-up for alerts</label>
+    </div>
+    
+    <div>
+        <button type="submit">Submit</button>
+    </div>
+</form>
+
 </body>
 </html>
