@@ -6,6 +6,9 @@ from psycopg2 import connect
 from psycopg2.extensions import connection
 from dotenv import load_dotenv
 
+ALERT_TYPE_NAME_POS = 4
+ALERT_TYPE_POS = 0
+
 
 def get_db_connection(config: dict):
     """Connect to the database."""
@@ -71,10 +74,8 @@ def select_weather_warnings(conn: connection) -> list[list]:
     """Selects data from the database relating to weather alerts per user.
     The data is returned as a list of lists."""
 
-    sql_query = """SELECT WA.alert_id, SL.severity_level, L.loc_name, C.name, AL.name,
-    F.forecast_timestamp, WC.description, WR.report_time, 
-    F.temperature, F.apparent_temp, F.wind_speed, F.wind_gusts, 
-    F.lightning_potential, F.snowfall, F.visibility, F.uv_index, F.rainfall, UD.email
+    sql_query = """SELECT C.name, SL.severity_level, L.loc_name, AL.name,
+    MIN(F.forecast_timestamp) AS min_time, MAX(F.forecast_timestamp) AS max_time, WC.description, UD.email
     FROM weather_alert AS WA
     JOIN severity_level AS SL ON (WA.severity_level_id = SL.severity_level_id)
     JOIN forecast AS F ON (WA.forecast_id = F.forecast_id)
@@ -83,9 +84,11 @@ def select_weather_warnings(conn: connection) -> list[list]:
     JOIN weather_report AS WR ON (F.weather_report_id = WR.weather_report_id)
     JOIN location AS L ON (WR.loc_id = L.loc_id)
     JOIN county AS C ON (L.county_id = C.county_id)
-    LEFT JOIN user_location_assignment AS ULA ON (L.loc_id = ULA.loc_id)
+    JOIN user_location_assignment AS ULA ON (L.loc_id = ULA.loc_id)
     JOIN user_details AS UD ON (ULA.user_id = UD.user_id)
-    WHERE WA.notified = FALSE"""
+    WHERE WA.notified = FALSE
+    GROUP BY SL.severity_level, L.loc_name, C.name, AL.name, WC.description, UD.email, SL.severity_level_id
+    ORDER BY min_time DESC, SL.severity_level_id ASC"""
 
     rows = []
     with conn.cursor() as cur:
@@ -131,29 +134,29 @@ def emails_to_dict(emails: list[str]) -> dict:
     return email_dict
 
 
-def remove_unnecessary_weather_data(warning: list[str]) -> list[str]:
+def add_unicode_symbols_weather(warning: list[str]) -> list[str]:
     """Remove the unnecessary data from the alerts such as emails.
     The weather conditions are kept depending on the weather alert type."""
 
-    if warning[0] != 'weather_alert':
-        return warning[:-1]
+    data = warning[:-1]
+    if warning[ALERT_TYPE_POS] != 'weather_alert':
+        return data
 
-    alert_type = warning[5]
-    data = warning[:9]
+    alert_type = warning[ALERT_TYPE_NAME_POS]
     if alert_type == 'Wind':
-        data += warning[11:13] + ['&#x1F32C;']
+        data += ['&#x1F32C;']
     if alert_type in ['Heat', 'Ice']:
-        data += warning[9:11] + ['&#x1F321;']
+        data += ['&#x1F321;']
     if alert_type == 'Lightning':
-        data += [warning[13]] + ['&#x26A1;']
+        data += ['&#x26A1;']
     if alert_type == 'Snowfall':
-        data += [warning[14]] + ['&#x1F328;']
+        data += ['&#x1F328;']
     if alert_type == 'Visibility':
-        data += [warning[15]] + ['&#x1F32B;']
+        data += ['&#x1F32B;']
     if alert_type == 'UV-index':
-        data += [warning[16]] + ['&#x1F506;']
+        data += ['&#x1F506;']
     if alert_type == 'Rain':
-        data += [warning[17]] + ['&#x1F327;']
+        data += ['&#x1F327;']
     return data
 
 
@@ -166,7 +169,7 @@ def sort_warnings_to_email(emails: list[str], warnings: list[list[str]]) -> dict
         if email not in emails:
             continue
 
-        emails[email] += [remove_unnecessary_weather_data(warning)]
+        emails[email] += [add_unicode_symbols_weather(warning)]
 
     return emails
 
