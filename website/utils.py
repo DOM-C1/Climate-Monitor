@@ -1,5 +1,6 @@
 """This file, provides the functions needed to fetch the data."""
 import requests
+from geopy.geocoders import Nominatim
 
 
 def get_details_from_post_code(postcode: str) -> dict:
@@ -9,22 +10,59 @@ def get_details_from_post_code(postcode: str) -> dict:
     return response
 
 
-def get_long_lat(details: dict) -> tuple:
-    """Given a dictioanry, find the longitude and latitude in that order."""
-    print('a')
+def get_postcode_long_lat(details: dict) -> tuple:
+    """Given a dictionary, find the longitude and latitude in that order."""
     return (details['result']['longitude'], details['result']['latitude'])
 
 
-def get_location_name(details: dict) -> str:
-    """Given the location details extract the location name"""
-    return details['result']['nuts']
+def get_location(address: dict) -> str:
+    """Extract the city/town/village name of a location."""
+    if 'city' in address:
+        return address['city']
+    if 'town' in address:
+        return address['town']
+    if 'village' in address:
+        return address['village']
+    return ""
 
 
-def get_county(details: dict) -> str:
-    """Given the location details extract the county."""
-    return details['result']['admin_county']
+def get_county(address: dict) -> str:
+    """Extract the county name of a location."""
+    return address["county"] if "county" in address else address.get("state_district", "")
 
 
-def get_country(details: dict) -> str:
-    """Given the location details extract the country."""
-    return details['result']['country']
+def get_country(address: dict) -> str:
+    """Extract the country name of a location."""
+    items = address.values()
+    if 'England' in items:
+        return 'England'
+    if 'Alba / Scotland' in items:
+        return 'Scotland'
+    if 'Cymru / Wales' in items:
+        return 'Wales'
+    if 'Northern Ireland / Tuaisceart Éireann' in items:
+        return 'Northern Ireland'
+    return ""
+
+
+def get_location_names(longitude: float, latitude: float) -> tuple[str]:
+    """Extract the location names from a longitude and latitude."""
+    geolocator = Nominatim(user_agent="my_application")
+    location_obj = geolocator.reverse(
+        f"{latitude}, {longitude}")
+    address = location_obj.raw['address']
+    country = get_country(address)
+    county = get_county(address)
+    location = get_location(address)
+    if not location:
+        location = county
+    if not county:
+        county = location
+    return location, county, country
+
+
+def get_standard_long_lat(location: str) -> tuple[float]:
+    """Get the latitude and longitude from a location."""
+    geolocator = Nominatim(user_agent="my_application")
+    location_details = geolocator.geocode(location)
+    return round(location_details.longitude, 7), round(location_details.latitude, 7)

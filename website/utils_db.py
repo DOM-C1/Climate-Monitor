@@ -1,7 +1,7 @@
 """This file provides useful functions needed to do database related things."""
 from flask import render_template
 from psycopg2 import connect
-from utils import get_country, get_county, get_long_lat, get_location_name
+from utils import get_standard_long_lat, get_postcode_long_lat, get_location_names
 
 
 def get_db_connection(config: dict) -> connect:
@@ -24,12 +24,12 @@ def add_to_database(table: str, data: dict, conn: connect) -> None:
     with conn.cursor() as cur:
         cur.execute(query, values)
         conn.commit()
-    return None
 
 
 def get_id(table: str, column: str, value: str, conn: connect) -> int:
-    """Given the table name, column and a value, checks whether that value exists and return it's ID if
-       if it does exist; a return value of -1 indicates that value doesn't exist."""
+    """Given the table name, column and a value, checks whether that 
+    value exists and return it's ID if it does exist; a return value of -1 
+    indicates that value doesn't exist."""
     query = f"SELECT * FROM {table} WHERE {column} = %s"
     with conn.cursor() as cur:
         cur.execute(query, (value,))
@@ -57,10 +57,9 @@ def get_loc_id(longitude: float, latitude: float, conn: connect) -> int:
 def setup_user_location(details, name, email, sub_newsletter, sub_alerts, conn) -> str:
     """This sets up location tracking for a user, if the user exists then it just adds a new
        location, otherwise, it sets up the new user too."""
-    longitude, latitude = get_long_lat(details)
-    location_name = get_location_name(details)
-    country = get_country(details)
-    county = get_county(details)
+    longitude, latitude = get_postcode_long_lat(details)
+    location_name, county, country = get_location_names(longitude, latitude)
+    get_standard_long_lat(location_name)
     country_id = get_id('country', 'name', country, conn)
     if country_id == -1:
         return render_template('cant_be_found_page.html')
