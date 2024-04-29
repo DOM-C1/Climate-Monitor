@@ -40,7 +40,6 @@ def time_rounder(timestamp: datetime, get_fifteen: bool = True) -> datetime:
     return (timestamp.replace(second=0, microsecond=0, minute=0))
 
 
-@st.cache_data
 def get_location_forecast_data(_conn) -> pd.DataFrame:
     """Returns location data as DataFrame from database."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -73,7 +72,6 @@ def get_location_forecast_data(_conn) -> pd.DataFrame:
     return data_f
 
 
-@st.cache_data
 def get_locations_with_alerts(_conn):
     """Get the loc_id and alert type if they exist in database"""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:

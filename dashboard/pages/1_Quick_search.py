@@ -30,11 +30,9 @@ def time_rounder(timestamp: datetime, get_fifteen: bool = True) -> datetime:
     return (timestamp.replace(second=0, microsecond=0, minute=0))
 
 
-@st.cache_data
 def get_location_forecast_data(_conn) -> pd.DataFrame:
     """Returns location data as DataFrame from database."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute("""SET timezone='Europe/London'""")
         cur.execute(f"""SELECT l.latitude, l.longitude, l.loc_name as "Location", c.name as "County", co.name as "Country",
                     f.forecast_timestamp as "Forecast time", wc.description as "Weather"
                     FROM location AS l
@@ -53,6 +51,33 @@ def get_location_forecast_data(_conn) -> pd.DataFrame:
                     AND EXTRACT(hours from F.forecast_timestamp) % 2 = 0
                     GROUP BY "Forecast time", l.loc_id, "County", "Country", "Weather"
                     """)
+
+        rows = cur.fetchall()
+        data_f = pd.DataFrame.from_dict(rows)
+
+    return data_f
+
+
+def get_current_weather(_conn, location) -> pd.DataFrame:
+    """Extract analytics about current weather for a specific location"""
+    with _conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(f"""SELECT f.forecast_timestamp as "Forecast time", wc.description as "Weather", f.*
+                    FROM location AS l
+                    JOIN county as c
+                    ON (l.county_id=c.county_id)
+                    JOIN country as co
+                    ON (c.country_id=co.country_id)
+                    JOIN weather_report as w
+                    ON (l.loc_id=w.loc_id)
+                    JOIN forecast as f
+                    ON (f.weather_report_id=w.weather_report_id)
+                    JOIN weather_code as wc
+                    ON (f.weather_code_id=wc.weather_code_id)
+                    WHERE F.forecast_timestamp = '{time_rounder(datetime.now())}'
+                    AND l.loc_name = '{location}'
+                    GROUP BY "Forecast time", l.loc_id, f.forecast_id, "Weather"
+                    """)
+        print(time_rounder(datetime.now()))
 
         rows = cur.fetchall()
         data_f = pd.DataFrame.from_dict(rows)
@@ -132,15 +157,25 @@ if __name__ == "__main__":
         print(location)
         lat, lon = forecast_d[forecast_d['Location'] ==
                               location][['latitude', 'longitude']].values[0]
-        w_map = get_map(forecast_d, lon, lat)
-        forecast_d = forecast_d[forecast_d['Location'] == location]
-        lat, lon = forecast_d[['latitude', 'longitude']].values[0]
-        forecast_d = forecast_d
-        st.markdown("# Today's forecast")
+        forecast_d_loc = forecast_d[forecast_d['Location'] == location]
+        lat, lon = forecast_d_loc[['latitude', 'longitude']].values[0]
+
+        st.markdown("## Current weather")
+        current_weather = forecast_d_loc[forecast_d_loc["Forecast time"] == time_rounder(
+            datetime.now())]
+        current_weather = get_current_weather(conn, location)
+        print('CURRENT')
+        print(current_weather)
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.write("hi")
+        st.write(current_weather)
+
+        st.markdown("## Today's forecast")
         st.write("average temp, modal weather code, etc.")
-        st.write(forecast_d)
-        st.markdown("# This week's forecast")
-        st.write(forecast_d)
-        w_map = get_map(forecast_d, lon, lat)
+        st.write(forecast_d_loc)
+        st.markdown("## This week's forecast")
+        st.write(forecast_d_loc)
+        get_map(forecast_d, lon, lat)
     else:
         st.write('Please pick a location!')
