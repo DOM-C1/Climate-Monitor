@@ -11,7 +11,7 @@ def get_details_from_post_code(postcode: str) -> dict:
 
 
 def get_postcode_long_lat(details: dict) -> tuple:
-    """Given a dictioanry, find the longitude and latitude in that order."""
+    """Given a dictionary, find the longitude and latitude in that order."""
     return (details['result']['longitude'], details['result']['latitude'])
 
 
@@ -66,7 +66,7 @@ def get_location_names(longitude: float, latitude: float) -> tuple[str]:
 
 
 def get_standard_long_lat(location: str) -> tuple[float]:
-    """Get the latitude and longitude from a county."""
+    """Get the latitude and longitude from a location."""
     geolocator = Nominatim(user_agent="my_application")
     location_details = geolocator.geocode(location)
     return location_details.longitude, location_details.latitude
