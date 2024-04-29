@@ -58,7 +58,7 @@ def setup_user_location(details, name, email, sub_newsletter, sub_alerts, conn) 
     get_standard_long_lat(location_name)
     country_id = get_id('country', 'name', country, conn)
     if country_id == -1:
-        return render_template('cant_be_found_page.html')
+        return render_template('page_not_found.html')
 
     county_id = get_id('county', 'name', county, conn)
     if county_id == -1:
