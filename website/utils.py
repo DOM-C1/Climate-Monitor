@@ -1,4 +1,5 @@
 """This file, provides the functions needed to fetch the data."""
+from geopy.geocoders import Nominatim
 import requests
 
 
@@ -14,14 +15,18 @@ def get_long_lat(details: dict) -> tuple:
     return (details['result']['longitude'], details['result']['latitude'])
 
 
+def get_county(latitude: float, longitude: float) -> tuple[str]:
+    """Extract the location names from a latitude and longitude."""
+    geolocator = Nominatim(user_agent="my_application")
+    location_obj = geolocator.reverse(
+        f"{latitude}, {longitude}")
+    address = location_obj.raw['address']
+    return address['county'] if 'county' in address else address.get('state_district', '')
+
+
 def get_location_name(details: dict) -> str:
     """Given the location details extract the location name"""
     return details['result']['nuts']
-
-
-def get_county(details: dict) -> str:
-    """Given the location details extract the county."""
-    return details['result']['admin_county']
 
 
 def get_country(details: dict) -> str:

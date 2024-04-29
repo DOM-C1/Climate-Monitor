@@ -60,7 +60,7 @@ def setup_user_location(details, name, email, sub_newsletter, sub_alerts, conn) 
     longitude, latitude = get_long_lat(details)
     location_name = get_location_name(details)
     country = get_country(details)
-    county = get_county(details)
+    county = get_county(latitude, longitude)
     country_id = get_id('country', 'name', country, conn)
     if country_id == -1:
         return render_template('cant_be_found_page.html')

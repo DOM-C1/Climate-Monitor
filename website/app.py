@@ -61,8 +61,7 @@ def submit_location():
         setup_user_location(details, name, email,
                             sub_newsletter, sub_alerts, conn)
         return 'User Added!'
-    else:
-        return render_template('location_not_found.html')
+    return render_template('location_not_found.html')
 
 
 if __name__ == '__main__':
