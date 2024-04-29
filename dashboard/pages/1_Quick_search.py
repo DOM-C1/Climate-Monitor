@@ -3,12 +3,14 @@ from os import environ as ENV
 
 import altair as alt
 import pandas as pd
+import numpy as np
 from psycopg2 import connect
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 import streamlit as st
 from vega_datasets import data
 import pydeck as pdk
+import streamlit.components.v1 as components
 
 
 @st.cache_resource
@@ -54,6 +56,7 @@ def get_location_forecast_data(_conn) -> pd.DataFrame:
 
         rows = cur.fetchall()
         data_f = pd.DataFrame.from_dict(rows)
+    print(data_f)
 
     return data_f
 
@@ -73,11 +76,12 @@ def get_current_weather(_conn, location) -> pd.DataFrame:
                     ON (f.weather_report_id=w.weather_report_id)
                     JOIN weather_code as wc
                     ON (f.weather_code_id=wc.weather_code_id)
-                    WHERE F.forecast_timestamp = '{time_rounder(datetime.now())}'
+                    WHERE F.forecast_timestamp <= '{time_rounder(datetime.now())}'
                     AND l.loc_name = '{location}'
                     GROUP BY "Forecast time", l.loc_id, f.forecast_id, "Weather"
+                    ORDER BY f.forecast_timestamp DESC
+                    LIMIT 1
                     """)
-        print(time_rounder(datetime.now()))
 
         rows = cur.fetchall()
         data_f = pd.DataFrame.from_dict(rows)
@@ -145,6 +149,85 @@ def get_map(loc_data, lon, lat):
                  'style': {"backgroundColor": "navyblue", 'color': '#87CEEB', 'font-size': '100%'}}))
 
 
+def compass(wind_direction):
+    compass_star = "https://upload.wikimedia.org/wikipedia/commons/b/bb/Windrose.svg"
+    a = {'x': [0], 'y': [0], 'img': [compass_star],
+         'arr_x': [0.95*np.cos((wind_direction-90)/180*np.pi)], 'arr_y': [-0.95*np.sin((wind_direction-90)/180*np.pi)]}
+    c = {'c_x': [-1.2, 1.2, -1.2, 1.2], 'c_y': [-1.2, -1.2, 1.2, 1.2]}
+    df = pd.DataFrame(a)
+    corners = pd.DataFrame(c)
+
+    star = alt.Chart(df).mark_image(width=220, height=220).encode(
+        x=alt.X('x', axis=alt.Axis(ticks=False,
+                                   domain=False, labels=False, title=None)),
+        y=alt.Y('y', axis=alt.Axis(ticks=False,
+                                   domain=False, labels=False, title=None)),
+        url='img',
+        tooltip=alt.value(None))
+
+    points = alt.Chart(corners).mark_point(size=0).encode(
+        x=alt.X('c_x', axis=alt.Axis(
+            ticks=False, domain=False, labels=False, title=None)),
+        y=alt.Y('c_y', axis=alt.Axis(
+            ticks=False, domain=False, labels=False, title=None)),
+        tooltip=alt.value(None)
+    ).properties(
+        width=260,
+        height=260
+    )
+    dot = alt.Chart(df).mark_point(size=800, color="gold", opacity=1).encode(
+        x=alt.X('arr_x', axis=alt.Axis(
+            ticks=False, domain=False, labels=False, title=None)),
+        y=alt.Y('arr_y', axis=alt.Axis(
+            ticks=False, domain=False, labels=False, title=None)),
+        tooltip=alt.value(str(wind_direction) + "°"),
+        strokeWidth=alt.value(10)).properties(
+        width=260,
+        height=260
+    )
+    dot_border = alt.Chart(df).mark_point(size=850, color="black", align="center", baseline="middle", opacity=1).encode(
+        x=alt.X('arr_x', axis=alt.Axis(
+            ticks=False, domain=False, labels=False, title=None)),
+        y=alt.Y('arr_y', axis=alt.Axis(
+            ticks=False, domain=False, labels=False, title=None)),
+        tooltip=alt.value(str(wind_direction) + "°"),
+        strokeWidth=alt.value(16)).properties(
+        width=260,
+        height=260
+    )
+
+    circle = alt.Chart(df).mark_arc(color="#ADD8E6").encode(
+        theta=alt.value(20),
+        radius=alt.value(120),
+        x=alt.X('x', axis=alt.Axis(ticks=False,
+                                   domain=False, labels=False, title=None)),
+        y=alt.Y('y', axis=alt.Axis(ticks=False,
+                                   domain=False, labels=False, title=None)),
+        tooltip=alt.value(None)).properties(
+        width=260,
+        height=260
+    )
+    border = alt.Chart(df).mark_arc(color="black").encode(
+        theta=alt.value(20),
+        radius=alt.value(130),
+        x=alt.X('x', axis=alt.Axis(ticks=False,
+                                   domain=False, labels=False, title=None)),
+        y=alt.Y('y', axis=alt.Axis(ticks=False,
+                                   domain=False, labels=False, title=None)),
+        tooltip=alt.value(None)
+    ).properties(
+        width=260,
+        height=260
+    )
+
+    compass = alt.layer(points, border, circle, star, dot_border, dot, title=alt.Title(' ', fontSize=0.5)).configure_view(
+        strokeWidth=0).configure_axis(grid=False).properties(
+        width=260,
+        height=260
+    )
+    return compass
+
+
 if __name__ == "__main__":
     load_dotenv()
     st.title('Quick Search')
@@ -153,23 +236,56 @@ if __name__ == "__main__":
     location = st.selectbox('Locations',
                             ['Select a location...'] + list(forecast_d['Location'].sort_values().unique()))
     if location != 'Select a location...':
-        print(forecast_d)
-        print(location)
         lat, lon = forecast_d[forecast_d['Location'] ==
                               location][['latitude', 'longitude']].values[0]
         forecast_d_loc = forecast_d[forecast_d['Location'] == location]
         lat, lon = forecast_d_loc[['latitude', 'longitude']].values[0]
 
-        st.markdown("## Current weather")
+        st.markdown("# Current weather")
         current_weather = forecast_d_loc[forecast_d_loc["Forecast time"] == time_rounder(
             datetime.now())]
         current_weather = get_current_weather(conn, location)
-        print('CURRENT')
         print(current_weather)
-        col1, col2, col3, col4 = st.columns(4)
+
+        col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
-            st.write("hi")
-        st.write(current_weather)
+            st.metric("Weather", current_weather['Weather'].values[0])
+            st.metric("Temperature",
+                      f"{current_weather['temperature'].values[0]}°C")
+            st.metric("Feels like",
+                      f"{current_weather['apparent_temp'].values[0]}°C")
+            st.metric("Cloud cover",
+                      f"{current_weather['cloud_cover'].values[0]}%")
+
+        with col2:
+            st.write("Wind direction")
+
+            st.altair_chart(
+                compass(current_weather['wind_direction'].values[0]), theme=None)
+            st.markdown("# ")
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric("Chance of rain",
+                      f"{current_weather['precipitation_prob'].values[0]}%")
+        with col2:
+            st.metric("Wind speed",
+                      f"{current_weather['wind_speed'].values[0]}km/h")
+
+        with col3:
+
+            st.metric("Wind gusts",
+                      f"{current_weather['wind_gusts'].values[0]}km/h")
+        st.markdown("#")
+
+        # st.altair_chart(alt.Chart(current_weather).mark_bar().encode(
+        #     x = "Weather",
+        #     y = "temperature"
+
+        # ) + alt.Chart(current_weather).mark_point().encode(
+        #     x = 'humidity',
+        #     y = 'precipitation',
+        #     color = "temperature"))
 
         st.markdown("## Today's forecast")
         st.write("average temp, modal weather code, etc.")

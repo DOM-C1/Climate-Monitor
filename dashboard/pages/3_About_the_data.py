@@ -25,9 +25,9 @@ def connect_to_db(config):
 
 
 @st.cache_data
-def get_data_from_db(conn, table_name) -> pd.DataFrame:
+def get_data_from_db(_conn, table_name) -> pd.DataFrame:
     """Returns data as DataFrame from database."""
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+    with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(f"SELECT * FROM {table_name};")
         rows = cur.fetchall()
         data_f = pd.DataFrame.from_dict(rows)
