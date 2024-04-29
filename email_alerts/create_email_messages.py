@@ -42,21 +42,21 @@ def get_time_range_msg(min_time: datetime, max_time: datetime) -> str:
     """Returns a message depending on the time ranges."""
 
     if min_time == max_time:
-        return min_time.strftime("%H:%M:%S")
+        return min_time.strftime("%H:%M")
 
-    return min_time.strftime("%H:%M:%S") + " - " + max_time.strftime("%H:%M:%S")
+    return min_time.strftime("%H:%M") + " - " + max_time.strftime("%H:%M")
 
 
 def create_html_table_weather(user_alerts: list[list[str]], weather_alert: str) -> str:
     """Creates an html table for weather warnings in an area."""
 
-    table_style = "'border: 1px solid  black;text-align: left;padding: 8px;'"""
+    table_style = """'border: 2px solid black;text-align: left;padding: 8px;text-align: center;'"""
 
     output = ''
-    table = """<h2>Extreme Weather:</h2><table style=
-    border-collapse: collapse;
-    padding: 2rem 0.5rem;
-    background-color: white;'>
+    table = """<h2 style='border-top: 2px solid black; padding-top: 1rem;'>Extreme Weather:</h2>
+    <table style=
+    'border-collapse: collapse; padding: 2rem 0.5rem; 
+    background-color: white; width: 35rem;'>
     <tr><th></th><th></th><th></th></tr>"""
 
     for alert in user_alerts:
@@ -80,37 +80,44 @@ def create_html_table_weather(user_alerts: list[list[str]], weather_alert: str) 
 def create_html_air_quality(user_alerts: list[list[str]], air_quality: str) -> str:
     """Creates the html message for air quality in the area."""
 
-    html_string = """"""
+    output = ''
+    html_string = """<h2 style='border-top: 2px solid black; padding-top: 1rem;'>Air Quality:</h2>"""
     for alert in user_alerts:
         if alert[ALERT_TYPE_POS] != air_quality:
             continue
         if alert[SEV_LEVEL_POS] == 'Warning no longer in force':
             continue
-        air_warning = """<h2>Air Quality:</h2><h3><span style='border: 1px solid  black;
+        air_warning = """<h3><span style='border: 1px solid  black;
         background-color: {}; text-align: center; font-size: 35px;
         display: inline-block; width:20px;'>!</span> {} in {}</h3>"""
         air_warning = air_warning.format(get_alert_visual(alert[SEV_LEVEL_POS]), get_alert_msg(
             alert[SEV_LEVEL_POS], 'Pollution Levels'), alert[LOC_NAME_POS])
-        html_string += air_warning
-    return html_string
+        output += air_warning
+    if not output:
+        return ""
+    return html_string + output
 
 
 def create_html_flood_alerts(user_alerts: list[list[str]], flood_alert: str) -> str:
     """Create the html message for flood warnings in an area."""
 
-    html_string = """"""
+    output = ''
+    html_string = """<h2 style='border-top: 2px solid black; padding-top: 1rem;'>Flood Alerts:</h2>"""
     for alert in user_alerts:
         if alert[ALERT_TYPE_POS] != flood_alert:
             continue
         if alert[SEV_LEVEL_POS] == 'Warning no longer in force':
             continue
-        flood_alert = """<h2>Flood Alerts:</h2><h3><span style='border: 1px solid  black;
+        flood_alert = """<h3><span style='border: 1px solid  black;
         background-color: {}; text-align: center; font-size: 35px;
         display: inline-block; width:20px;'>!</span> {} in {} - {}</h3>"""
         flood_alert = flood_alert.format(get_alert_visual(alert[SEV_LEVEL_POS]), get_alert_msg(
             alert[SEV_LEVEL_POS], 'Risk of Flooding'), alert[LOC_NAME_POS], alert[TIMESTAMP_POS].strftime("%H:%M:%S"))
-        html_string += flood_alert
-    return html_string
+        output += flood_alert
+
+    if not output:
+        return ""
+    return html_string + output
 
 
 def create_full_html_per_user(users_weather: list[list], tables: list[str]) -> str:
@@ -121,9 +128,11 @@ def create_full_html_per_user(users_weather: list[list], tables: list[str]) -> s
     <head>
     <meta charset="UTF-16">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head><body style=''font-family: arial, sans-serif; background-color:
-    white; justify-content: center;align-items: center;'>
-    <h1>!-!-!-!-!- Weather Alerts -!-!-!-!-!</h1>"""
+    </head><body style='font-family: sans-serif; background-color: white; 
+    border: 2px solid black;width: 35rem; justify-content: center;
+    align-items: center;'>
+    <h1 style='background-color: #009879; width: 32.73rem; padding: 1rem; 
+    border: 2px solid black; color: white; text-align: center;'>!-!-!-!-!-Weather Alerts-!-!-!-!-!</h1>"""
     weather_alerts_data = create_html_table_weather(users_weather, tables[0])
     air_quality_data = create_html_air_quality(users_weather, tables[1])
     flood_warning_data = create_html_flood_alerts(users_weather, tables[2])
