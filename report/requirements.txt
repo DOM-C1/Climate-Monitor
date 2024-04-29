@@ -1,0 +1,3 @@
+pandas
+aioboto3
+psycopg2-binary

@@ -1,4 +1,6 @@
 from os import environ as ENV
+import asyncio
+import aioboto3
 
 from dotenv import load_dotenv
 from boto3 import client
@@ -37,16 +39,23 @@ WEATHER_EMOJIS = {
 }
 
 
-def lambda_handler(event, context):
+async def lambda_handler(event: dict = None, context: dict = None):
+    """Designed to be compatible with Lambda function, uses multithread"""
     load_dotenv()
-    conn = get_db_connection(ENV)
-    big_df = prepare_data_frame(conn)
-    styled_html = format_forecast_report(
-        big_df, 'trainee.dominic.chambers@sigmalabs.co.uk')
+    conn = await get_db_connection(ENV)
+    df = await prepare_data_frame(conn)
 
-    ses = client("ses", aws_access_key_id=ENV["AWS_KEY"],
-                 aws_secret_access_key=ENV["AWS_SKEY"], region_name="eu-west-2")
-    send_email(ses, styled_html)
+    async with aioboto3.client('ses', aws_access_key_id='AWS_KEY',
+                               aws_secret_access_key='AWS_SKEY',
+                               region_name='eu-west-2') as ses:
+        tasks = []
+        for email in df['email'].unique():
+            styled_html = await format_forecast_report(df, email)
+            task = asyncio.create_task(send_email(ses, styled_html, email))
+            tasks.append(task)
+        await asyncio.gather(*tasks)
+
+    print("All emails sent successfully.")
 
 
 def get_db_connection(config: dict) -> connect:
@@ -71,8 +80,7 @@ def execute_query(conn: connect, query: str) -> pd.DataFrame:
 
 
 def prepare_data_frame(conn: connect) -> pd.DataFrame:
-    """Prepares a complete data frame combining user details with weather forecasts.
-    """
+    """Prepares a complete data frame combining user details with weather forecasts."""
     user_details_query = """
         SELECT *
         FROM user_details AS UD
@@ -97,28 +105,28 @@ def prepare_data_frame(conn: connect) -> pd.DataFrame:
 
 
 def add_unicode(cell: str) -> str:
+    """Adds emojis to the end of the weather description."""
     return f"{cell} {WEATHER_EMOJIS[cell]}"
 
 
-def send_email(sesclient: client, html: str, to_address: str) -> None:
-    """Sends email using BOTO3"""
+async def send_email(ses: client, html_content: str, recipient: str):
+    """Async function to send email using AWS SES."""
+    try:
+        response = await ses.send_email(
 
-    sesclient.send_email(
-        Source="Climate Monitor",
-        Destination={
-            "ToAddresses": [
-                to_address,
-            ]
-        },
-        Message={
-
-            "Subject": {"Data": "Here is your daily report."},
-            "Body": {"Text": {"Data": "Daily report"}, "Html": {"Data": html}},
-        },
-    )
+            Source='Climate Control',
+            Destination={'ToAddresses': [recipient]},
+            Message={
+                'Subject': {'Data': 'Your Weather Forecast for the day'},
+                'Body': {'Html': {'Data': html_content}}
+            }
+        )
+        print("Email sent! Message ID:", response['MessageId'])
+    except Exception as e:
+        print("Error sending email:", e)
 
 
-def format_forecast_report(df: pd.DataFrame, target_email: str) -> str:
+async def format_forecast_report(df: pd.DataFrame, target_email: str) -> str:
     """Formats the filtered forecast data into HTML for sending as an email."""
     filtered_df = df[df['email'] == target_email]
     today = datetime.now().date()
@@ -194,11 +202,3 @@ def get_ses_client(config: dict) -> client:
         aws_secret_access_key=ENV["AWS_SKEY"],
         region_name="eu-west-2",
     )
-
-
-load_dotenv()
-conn = get_db_connection(ENV)
-df = prepare_data_frame(conn)
-html = format_forecast_report(df, 'trainee.dominic.chambers@sigmalabs.co.uk')
-ses = get_ses_client(ENV)
-send_email(ses, html)
