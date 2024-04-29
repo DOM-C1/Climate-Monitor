@@ -60,7 +60,7 @@ def get_location_forecast_data(_conn) -> pd.DataFrame:
     return data_f
 
 
-def uk_map(loc_data, lat, lon, tooltips):
+def uk_map(loc_data, lon=-2, lat=54, tooltips=[]):
     """Generates a uk map of where the locations."""
     # Load GeoJSON data
     countries = alt.topo_feature(data.world_110m.url, 'countries')
@@ -72,7 +72,7 @@ def uk_map(loc_data, lat, lon, tooltips):
     ).project(
         type='mercator',
         scale=1500,                          # Magnify
-        center=[-2, 54],                     # [lon, lat]
+        center=[lon, lat],                     # [lon, lat]
         clipExtent=[[0, 0], [500, 500]],    # [[left, top], [right, bottom]]
     ).properties(
         width=500,
@@ -95,7 +95,7 @@ def uk_map(loc_data, lat, lon, tooltips):
     return alt.layer(background, points).properties(title='Location map')
 
 
-def get_map(loc_data, lat, lon):
+def get_map(loc_data, lon, lat):
     st.pydeck_chart(pdk.Deck(
         map_style=None,
         initial_view_state=pdk.ViewState(
@@ -132,7 +132,7 @@ if __name__ == "__main__":
         print(location)
         lat, lon = forecast_d[forecast_d['Location'] ==
                               location][['latitude', 'longitude']].values[0]
-        w_map = get_map(forecast_d, lat, lon)
+        w_map = get_map(forecast_d, lon, lat)
         forecast_d = forecast_d[forecast_d['Location'] == location]
         lat, lon = forecast_d[['latitude', 'longitude']].values[0]
         forecast_d = forecast_d
@@ -141,6 +141,6 @@ if __name__ == "__main__":
         st.write(forecast_d)
         st.markdown("# This week's forecast")
         st.write(forecast_d)
-        w_map = get_map(forecast_d, lat, lon)
+        w_map = get_map(forecast_d, lon, lat)
     else:
         st.write('Please pick a location!')
