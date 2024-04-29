@@ -1,3 +1,5 @@
+"""Test the functions in the utils module."""
+
 import unittest
 from unittest.mock import patch
 
@@ -11,7 +13,8 @@ class TestPostcodeUtils(unittest.TestCase):
 
     def setUp(self):
         """
-        Set up a mock response for the postcode API that includes geographic and administrative information.
+        Set up a mock response for the postcode API that includes geographic and 
+        administrative information.
         """
         self.mock_postcode_response = {
             'result': {
@@ -26,7 +29,8 @@ class TestPostcodeUtils(unittest.TestCase):
     @patch('requests.get')
     def test_get_details_from_post_code(self, mock_get):
         """
-        Test fetching detailed information from a postcode API to ensure it correctly captures and returns data.
+        Test fetching detailed information from a postcode API to ensure it correctly 
+        captures and returns data.
         """
         mock_get.return_value.json.return_value = self.mock_postcode_response
         response = get_details_from_post_code('SW1A 1AA')

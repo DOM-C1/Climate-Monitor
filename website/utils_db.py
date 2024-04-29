@@ -24,12 +24,12 @@ def add_to_database(table: str, data: dict, conn: connect) -> None:
     with conn.cursor() as cur:
         cur.execute(query, values)
         conn.commit()
-    return None
 
 
 def get_id(table: str, column: str, value: str, conn: connect) -> int:
-    """Given the table name, column and a value, checks whether that value exists and return it's ID if
-       if it does exist; a return value of -1 indicates that value doesn't exist."""
+    """Given the table name, column and a value, checks whether that 
+    value exists and return it's ID if it does exist; a return value of -1 
+    indicates that value doesn't exist."""
     query = f"SELECT * FROM {table} WHERE {column} = %s"
     with conn.cursor() as cur:
         cur.execute(query, (value,))
