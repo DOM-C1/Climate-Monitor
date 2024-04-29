@@ -9,7 +9,19 @@ from dotenv import load_dotenv
 import streamlit as st
 import pydeck as pdk
 
+ICON_URL = "https://upload.wikimedia.org/wikipedia/commons/f/f7/Light_Rain_Cloud.png"
 
+icon_data = {
+    # Icon from Wikimedia, used the Creative Commons Attribution-Share Alike 3.0
+    # Unported, 2.5 Generic, 2.0 Generic and 1.0 Generic licenses
+    "url": ICON_URL,
+    "width": 242,
+    "height": 242,
+    "anchorY": 242,
+}
+
+
+@st.cache_resource
 def connect_to_db(config):
     """Returns a live database connection."""
     return connect(
@@ -28,9 +40,10 @@ def time_rounder(timestamp: datetime, get_fifteen: bool = True) -> datetime:
     return (timestamp.replace(second=0, microsecond=0, minute=0))
 
 
-def get_location_forecast_data(conn) -> pd.DataFrame:
+@st.cache_data
+def get_location_forecast_data(_conn) -> pd.DataFrame:
     """Returns location data as DataFrame from database."""
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+    with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""SET timezone='Europe/London'""")
         cur.execute(f"""SELECT l.latitude, l.longitude, l.loc_name as "Location", c.name as "County", co.name as "Country",
                     f.forecast_timestamp as "Forecast time", wc.description as "Weather"
@@ -52,13 +65,18 @@ def get_location_forecast_data(conn) -> pd.DataFrame:
         print('LOCATIONS')
         print(rows)
         data_f = pd.DataFrame.from_dict(rows)
+    data_f["icon_data"] = None
+
+    for i in data_f.index:
+        data_f["icon_data"][i] = icon_data
 
     return data_f
 
 
-def get_locations_with_alerts(conn):
+@st.cache_data
+def get_locations_with_alerts(_conn):
     """Get the loc_id and alert type if they exist in database"""
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+    with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""SET timezone='Europe/London'""")
         cur.execute("""SELECT AL.name as "Alert type", SL.severity_level as "Severity",
                     L.loc_name as "Location", L.loc_id, MIN(F.forecast_timestamp) as min_time, MAX(F.forecast_timestamp) as max_time
@@ -79,7 +97,10 @@ def get_locations_with_alerts(conn):
         print(rows)
         print(type(rows))
         data_f = pd.DataFrame(rows)
+    data_f["icon_data"] = None
 
+    for i in data_f.index:
+        data_f["icon_data"][i] = icon_data
     return data_f
 
 
@@ -116,8 +137,12 @@ def get_map(loc_data, lat, lon, location_type):
                 extruded=True,
             ),
             pdk.Layer(
-                'ScatterplotLayer',
+                'IconLayer',
                 data=loc_data,
+                get_icon="icon_data",
+                opacity=500,
+                get_size=1,
+                size_scale=15,
                 get_position="[longitude, latitude]",
                 get_color='[200, 30, 0, 160]',
                 get_text="location",
@@ -133,44 +158,43 @@ def get_map(loc_data, lat, lon, location_type):
 if __name__ == "__main__":
     load_dotenv()
     st.title('Explore')
-    with connect_to_db(ENV) as conn:
-        forecast_d = get_location_forecast_data(conn)
-        with st.sidebar:
-            by_loc = st.checkbox("Search by location")
-            if by_loc:
-                loc_type = st.selectbox('Search by:',
-                                        ['Location', 'County', 'Country'])
-                if loc_type == 'Location':
-                    location = st.selectbox('Locations',
-                                            forecast_d['Location'].sort_values().unique())
-                elif loc_type == 'County':
-                    location = st.selectbox('Counties',
-                                            forecast_d['County'].sort_values().unique())
-                elif loc_type == 'Country':
-                    location = st.selectbox('Locations',
-                                            forecast_d['Country'].sort_values().unique())
-
+    conn = connect_to_db(dict(ENV))
+    forecast_d = get_location_forecast_data(conn)
+    with st.sidebar:
+        by_loc = st.checkbox("Search by location")
         if by_loc:
-            lat, lon, county = forecast_d[forecast_d[loc_type] == location][[
-                'latitude', 'longitude', 'County']].values[0]
-            forecast_d = forecast_d[forecast_d['Forecast time']
-                                    == time_rounder(datetime.now())]
-            w_map = get_map(forecast_d, lat, lon, loc_type)
-        else:
-            alerts = get_locations_with_alerts(conn)
-            print(alerts)
-            for _, alert in alerts.iterrows():
-                if alert["Severity"] == "Alert":
-                    icon = "❕"
-                elif alert["Severity"] == "Warning":
-                    icon = "⚠️"
-                elif alert["Severity"] == "Severe Warning":
-                    icon = "🚨"
-                if alert["min_time"] != alert["max_time"]:
-                    st.warning(
-                        f'**{alert["Location"]}** has a **{alert["Alert type"]} {alert["Severity"]}** from **{alert["min_time"]}** to **{alert["max_time"]}**.', icon=icon)
-                else:
-                    st.warning(
-                        f'**{alert["Location"]}** has a **{alert["Alert type"]} {alert["Severity"]}** at **{alert["min_time"]}**.', icon=icon)
-            w_map = get_map(forecast_d, 52.536, -2.5341, 'UK')
-    conn.close()
+            loc_type = st.selectbox('Search by:',
+                                    ['Location', 'County', 'Country'])
+            if loc_type == 'Location':
+                location = st.selectbox('Locations',
+                                        forecast_d['Location'].sort_values().unique())
+            elif loc_type == 'County':
+                location = st.selectbox('Counties',
+                                        forecast_d['County'].sort_values().unique())
+            elif loc_type == 'Country':
+                location = st.selectbox('Locations',
+                                        forecast_d['Country'].sort_values().unique())
+
+    if by_loc:
+        lat, lon, county = forecast_d[forecast_d[loc_type] == location][[
+            'latitude', 'longitude', 'County']].values[0]
+        forecast_d = forecast_d[forecast_d['Forecast time']
+                                == time_rounder(datetime.now())]
+        w_map = get_map(forecast_d, lat, lon, loc_type)
+    else:
+        alerts = get_locations_with_alerts(conn)
+        print(alerts)
+        for _, alert in alerts.iterrows():
+            if alert["Severity"] == "Alert":
+                icon = "❕"
+            elif alert["Severity"] == "Warning":
+                icon = "⚠️"
+            elif alert["Severity"] == "Severe Warning":
+                icon = "🚨"
+            if alert["min_time"] != alert["max_time"]:
+                st.warning(
+                    f'**{alert["Location"]}** has a **{alert["Alert type"]} {alert["Severity"]}** from **{alert["min_time"]}** to **{alert["max_time"]}**.', icon=icon)
+            else:
+                st.warning(
+                    f'**{alert["Location"]}** has a **{alert["Alert type"]} {alert["Severity"]}** at **{alert["min_time"]}**.', icon=icon)
+        w_map = get_map(forecast_d, 52.536, -2.5341, 'UK')

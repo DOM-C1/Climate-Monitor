@@ -11,6 +11,7 @@ from vega_datasets import data
 import pydeck as pdk
 
 
+@st.cache_resource
 def connect_to_db(config):
     """Returns a live database connection."""
     return connect(
@@ -29,9 +30,10 @@ def time_rounder(timestamp: datetime, get_fifteen: bool = True) -> datetime:
     return (timestamp.replace(second=0, microsecond=0, minute=0))
 
 
-def get_location_forecast_data(conn) -> pd.DataFrame:
+@st.cache_data
+def get_location_forecast_data(_conn) -> pd.DataFrame:
     """Returns location data as DataFrame from database."""
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+    with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""SET timezone='Europe/London'""")
         cur.execute(f"""SELECT l.latitude, l.longitude, l.loc_name as "Location", c.name as "County", co.name as "Country",
                     f.forecast_timestamp as "Forecast time", wc.description as "Weather"
@@ -121,24 +123,24 @@ def get_map(loc_data, lat, lon):
 if __name__ == "__main__":
     load_dotenv()
     st.title('Quick Search')
-    with connect_to_db(ENV) as conn:
-        forecast_d = get_location_forecast_data(conn)
-        location = st.selectbox('Locations',
-                                ['Select a location...'] + list(forecast_d['Location'].sort_values().unique()))
-        if location != 'Select a location...':
-            print(forecast_d)
-            print(location)
-            lat, lon = forecast_d[forecast_d['Location'] ==
-                                  location][['latitude', 'longitude']].values[0]
-            w_map = get_map(forecast_d, lat, lon)
-            forecast_d = forecast_d[forecast_d['Location'] == location]
-            lat, lon = forecast_d[['latitude', 'longitude']].values[0]
-            forecast_d = forecast_d
-            st.markdown("# Today's forecast")
-            st.write("average temp, modal weather code, etc.")
-            st.write(forecast_d)
-            st.markdown("# This week's forecast")
-            st.write(forecast_d)
-            w_map = get_map(forecast_d, lat, lon)
-        else:
-            st.write('Please pick a location!')
+    conn = connect_to_db(dict(ENV))
+    forecast_d = get_location_forecast_data(conn)
+    location = st.selectbox('Locations',
+                            ['Select a location...'] + list(forecast_d['Location'].sort_values().unique()))
+    if location != 'Select a location...':
+        print(forecast_d)
+        print(location)
+        lat, lon = forecast_d[forecast_d['Location'] ==
+                              location][['latitude', 'longitude']].values[0]
+        w_map = get_map(forecast_d, lat, lon)
+        forecast_d = forecast_d[forecast_d['Location'] == location]
+        lat, lon = forecast_d[['latitude', 'longitude']].values[0]
+        forecast_d = forecast_d
+        st.markdown("# Today's forecast")
+        st.write("average temp, modal weather code, etc.")
+        st.write(forecast_d)
+        st.markdown("# This week's forecast")
+        st.write(forecast_d)
+        w_map = get_map(forecast_d, lat, lon)
+    else:
+        st.write('Please pick a location!')

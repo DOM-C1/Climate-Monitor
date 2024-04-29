@@ -12,6 +12,7 @@ from vega_datasets import data
 import pydeck as pdk
 
 
+@st.cache_resource
 def connect_to_db(config):
     """Returns a live database connection."""
     return connect(
@@ -23,6 +24,7 @@ def connect_to_db(config):
     )
 
 
+@st.cache_data
 def get_data_from_db(conn, table_name) -> pd.DataFrame:
     """Returns data as DataFrame from database."""
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -32,18 +34,10 @@ def get_data_from_db(conn, table_name) -> pd.DataFrame:
     return data_f
 
 
-def get_data_from_db(conn, table_name) -> pd.DataFrame:
-    """Returns data as DataFrame from database."""
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(f"SELECT * FROM {table_name};")
-        rows = cur.fetchall()
-        data_f = pd.DataFrame.from_dict(rows)
-    return data_f
-
-
-def get_location_data(conn) -> pd.DataFrame:
+@st.cache_data
+def get_location_data(_conn) -> pd.DataFrame:
     """Returns location data as DataFrame from database."""
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+    with _conn.cursor(cursor_factory=RealDictCursor) as cur:
 
         cur.execute(f"""SELECT l.latitude, l.longitude, l.loc_name as Location, c.name as County, co.name as Country
                     FROM location AS l
@@ -59,9 +53,10 @@ def get_location_data(conn) -> pd.DataFrame:
     return data_f
 
 
-def get_location_forecast_data(conn) -> pd.DataFrame:
+@st.cache_data
+def get_location_forecast_data(_conn) -> pd.DataFrame:
     """Returns location data as DataFrame from database."""
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+    with _conn.cursor(cursor_factory=RealDictCursor) as cur:
 
         cur.execute(f"""SELECT l.latitude, l.longitude, l.loc_name as Location, c.name as County, co.name as Country,
                     f.forecast_timestamp as forecast_time, wc.description as weather
@@ -123,7 +118,7 @@ def uk_map(loc_data, tooltips):
 if __name__ == "__main__":
 
     load_dotenv()
-    with connect_to_db(ENV) as connection:
+    with connect_to_db(dict(ENV)) as connection:
         forecast_data = get_data_from_db(connection, 'forecast')
         forecast_d = get_location_forecast_data(connection)
         st.title('About the Data')
@@ -133,4 +128,3 @@ if __name__ == "__main__":
 
         w_map = uk_map(forecast_d, ['location', 'weather'])
         st.altair_chart(w_map, use_container_width=True)
-    connection.close()
