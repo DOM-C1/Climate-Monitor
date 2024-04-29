@@ -59,7 +59,7 @@ def setup_user_location(details, name, email, sub_newsletter, sub_alerts, conn) 
        location, otherwise, it sets up the new user too."""
     longitude, latitude = get_postcode_long_lat(details)
     location_name, county, country = get_location_names(longitude, latitude)
-    get_standard_long_lat(location_name)
+    longitude, latitude = get_standard_long_lat(location_name)
     country_id = get_id('country', 'name', country, conn)
     if country_id == -1:
         return render_template('cant_be_found_page.html')
