@@ -1,7 +1,6 @@
 """This script separates the locations into chunks for mapping to AWS Lambdas."""
 
 from os import environ as ENV
-from json import dumps
 
 from dotenv import load_dotenv
 from psycopg2 import connect
@@ -46,13 +45,12 @@ def chunk_locations(locations: list[dict], chunk_size: int = 100) -> list[list[d
             for i in range(0, len(locations), chunk_size)]
 
 
-def handler(event: dict = None, context: dict = None) -> list[list[dict]]:
+def handler(event: dict = None, context: dict = None) -> dict[list[list[dict]]]:
     """AWS Lambda function handler for chunking locations, returns
     JSON list of list of dictionaries."""
 
     load_dotenv()
     conn = get_db_connection(ENV)
     locations = query_locations(conn)
-    chunks = chunk_locations(locations)
 
-    return dumps(chunks, indent=3)
+    return {"data": chunk_locations(locations)}

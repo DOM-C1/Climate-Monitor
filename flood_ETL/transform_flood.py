@@ -12,7 +12,7 @@ def get_lat_lon(county: str) -> tuple[float]:
     """Get the latitude and longitude from a county."""
     geolocator = Nominatim(user_agent="my_application")
     location = geolocator.geocode(county)
-    return location.latitude, location.longitude
+    return round(location.latitude, 7), round(location.longitude, 7)
 
 
 def convert_dtypes(data: pd.DataFrame) -> pd.DataFrame:

@@ -1,4 +1,4 @@
-
+"""Tests for the email alert scripts."""
 import pytest
 from datetime import datetime
 
@@ -8,7 +8,7 @@ from create_email_messages import get_alert_msg, get_alert_visual, create_html_t
 
 
 def test_emails_to_dict():
-    """test that the emails are made into a dictionary"""
+    """Test that the emails are made into a dictionary."""
     test_data = ['email@1.com', 'email@2.com']
     output = emails_to_dict(test_data)
     assert isinstance(output, dict)
@@ -16,6 +16,7 @@ def test_emails_to_dict():
 
 
 def test_remove_unnecessary_weather_data():
+    """Test that data is removed when it doesn't match a weather alert type."""
 
     test_data = ['weather_alert', 1, 'Alert', 'belfast',
                  'antrim', 'Wind', datetime.strptime('12:00:00', '%H:%M:%S'),
@@ -30,6 +31,8 @@ def test_remove_unnecessary_weather_data():
 
 
 def test_sort_warnings_to_email():
+    """Tests that warnings are matched to their respective dictionary key
+    which is their email."""
 
     test_data1 = [['weather_alert', 1, 'Alert', 'belfast',
                   'antrim', 'Wind', datetime.strptime('12:00:00', '%H:%M:%S'),
@@ -54,16 +57,20 @@ def test_sort_warnings_to_email():
                                                                'Warning! High Rain'),
                                                               ("Severe Warning", 'Snowfall', 'Severe Warning! Extreme Snowfall')])
 def test_get_alert_msg(test_input1, test_input2, expected):
+    """Test that the right alert message is retrieved for an alert."""
 
     assert get_alert_msg(test_input1, test_input2) == expected
 
 
 def test_alert_visual():
+    """Test that the right colour is retrieved for an alert level."""
 
     assert get_alert_visual('Warning') == '#FF8300'
 
 
 def test_create_table_weather():
+    """Tests that the right html message is returned with the 
+    correct data for weather alerts."""
 
     test_data = [['weather_alert', 1, 'Alert', 'belfast',
                   'antrim', 'Wind', datetime.strptime(
@@ -82,6 +89,8 @@ def test_create_table_weather():
 
 
 def test_create_html_air_quality():
+    """Tests that the right html message is returned with the 
+    correct data for air quality."""
 
     test_data = [['air_quality', 1, 'Alert', 'belfast', 'antrim', 111]]
 
@@ -92,6 +101,8 @@ def test_create_html_air_quality():
 
 
 def test_create_html_flood_alerts():
+    """Tests that the right html message is returned with the
+    correct data for flood alerts."""
 
     test_data = [['flood_warnings', 1, 'Alert', 'belfast', 'antrim',
                   datetime.strptime('12:00:00', '%H:%M:%S')]]
