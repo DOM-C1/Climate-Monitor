@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 from geopy.geocoders import Nominatim
 
-from extract import get_flood_warning_json
+from extract_flood import get_flood_warning_json
 
 
 def get_lat_lon(county: str) -> tuple[float]:
