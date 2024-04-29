@@ -4,6 +4,7 @@ from os import environ as ENV
 
 from dotenv import load_dotenv
 
+from extract import async_api_calls
 from transform import gather_weather_data, gather_air_quality
 from load import (get_db_connection, get_location_id, insert_weather_report,
                   insert_forecast, insert_weather_alert, insert_air_quality)
@@ -14,8 +15,11 @@ def pipeline(latitude: float, longitude: float) -> None:
 
     load_dotenv()
 
-    weather = gather_weather_data(latitude, longitude)
-    air_quality = gather_air_quality(latitude, longitude, ENV)
+    api_data = async_api_calls(latitude, longitude, ENV)
+
+    weather = gather_weather_data(api_data["weather_for_24hr"],
+                                  api_data["weather_for_week"])
+    air_quality = gather_air_quality(api_data["air_quality"])
 
     connection = get_db_connection(ENV)
 
