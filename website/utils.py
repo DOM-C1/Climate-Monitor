@@ -62,6 +62,7 @@ def get_location_names(longitude: float, latitude: float) -> tuple[str]:
         location = county
     if not county:
         county = location
+    print(location)
     return location, county, country
 
 
@@ -69,4 +70,4 @@ def get_standard_long_lat(location: str) -> tuple[float]:
     """Get the latitude and longitude from a location."""
     geolocator = Nominatim(user_agent="my_application")
     location_details = geolocator.geocode(location)
-    return location_details.longitude, location_details.latitude
+    return round(location_details.longitude, 7), round(location_details.latitude, 7)
