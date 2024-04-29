@@ -46,13 +46,6 @@ def get_weather_details_for_24hrs(latitude: float, longitude: float) -> dict:
     return response.json()
 
 
-def get_flood_warning_json() -> dict:
-    """Returns information for the whole of the UK regarding floods."""
-    response = requests.get(
-        'http://environment.data.gov.uk/flood-monitoring/id/floods', timeout=6)
-    return response.json()
-
-
 def get_air_quality(latitude: float, longitude: float, config: dict) -> dict:
     """This function gets the air quality given a latitude and longitude."""
     load_dotenv()

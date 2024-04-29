@@ -1,8 +1,5 @@
 """Load flood warnings into the database"""
 
-from transform_flood import get_all_floods
-from dotenv import load_dotenv
-from os import environ as ENV
 from psycopg2 import connect
 from psycopg2.extras import RealDictCursor
 from psycopg2.extensions import connection

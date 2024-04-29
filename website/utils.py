@@ -1,6 +1,6 @@
 """This file, provides the functions needed to fetch the data."""
-from geopy.geocoders import Nominatim
 import requests
+from geopy.geocoders import Nominatim
 
 
 def get_details_from_post_code(postcode: str) -> dict:
@@ -10,25 +10,59 @@ def get_details_from_post_code(postcode: str) -> dict:
     return response
 
 
-def get_long_lat(details: dict) -> tuple:
-    """Given a dictioanry, find the longitude and latitude in that order."""
+def get_postcode_long_lat(details: dict) -> tuple:
+    """Given a dictionary, find the longitude and latitude in that order."""
     return (details['result']['longitude'], details['result']['latitude'])
 
 
-def get_county(latitude: float, longitude: float) -> tuple[str]:
-    """Extract the location names from a latitude and longitude."""
+def get_location(address: dict) -> str:
+    """Extract the city/town/village name of a location."""
+    if 'city' in address:
+        return address['city']
+    if 'town' in address:
+        return address['town']
+    if 'village' in address:
+        return address['village']
+    return ""
+
+
+def get_county(address: dict) -> str:
+    """Extract the county name of a location."""
+    return address["county"] if "county" in address else address.get("state_district", "")
+
+
+def get_country(address: dict) -> str:
+    """Extract the country name of a location."""
+    items = address.values()
+    if 'England' in items:
+        return 'England'
+    if 'Alba / Scotland' in items:
+        return 'Scotland'
+    if 'Cymru / Wales' in items:
+        return 'Wales'
+    if 'Northern Ireland / Tuaisceart Éireann' in items:
+        return 'Northern Ireland'
+    return ""
+
+
+def get_location_names(longitude: float, latitude: float) -> tuple[str]:
+    """Extract the location names from a longitude and latitude."""
     geolocator = Nominatim(user_agent="my_application")
     location_obj = geolocator.reverse(
         f"{latitude}, {longitude}")
     address = location_obj.raw['address']
-    return address['county'] if 'county' in address else address.get('state_district', '')
+    country = get_country(address)
+    county = get_county(address)
+    location = get_location(address)
+    if not location:
+        location = county
+    if not county:
+        county = location
+    return location, county, country
 
 
-def get_location_name(details: dict) -> str:
-    """Given the location details extract the location name"""
-    return details['result']['nuts']
-
-
-def get_country(details: dict) -> str:
-    """Given the location details extract the country."""
-    return details['result']['country']
+def get_standard_long_lat(location: str) -> tuple[float]:
+    """Get the latitude and longitude from a location."""
+    geolocator = Nominatim(user_agent="my_application")
+    location_details = geolocator.geocode(location)
+    return round(location_details.longitude, 7), round(location_details.latitude, 7)
