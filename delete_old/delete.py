@@ -39,7 +39,7 @@ def delete_weather_forecast(conn: connection) -> None:
     """Delete any forecast that is out of date"""
 
     sql_query = """DELETE FROM forecast
-                    WHERE (forecast_timestamp < CURRENT_TIMESTAMP) AND 
+                    WHERE (forecast_timestamp < CURRENT_TIMESTAMP - INTERVAL '30 minutes') AND 
                     (forecast_id NOT IN (SELECT WA.forecast_id FROM weather_alert AS WA));
                 """
 
