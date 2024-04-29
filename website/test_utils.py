@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from utils import get_details_from_post_code, get_long_lat, get_location_name, get_county, get_country
+from utils import get_details_from_post_code, get_postcode_long_lat, get_location_names
 
 
 class TestPostcodeUtils(unittest.TestCase):
@@ -36,28 +36,31 @@ class TestPostcodeUtils(unittest.TestCase):
         """
         Test extraction of longitude and latitude from the postcode API response.
         """
-        long_lat = get_long_lat(self.mock_postcode_response)
+        long_lat = get_postcode_long_lat(self.mock_postcode_response)
         self.assertEqual(long_lat, (-0.12574, 51.50853))
 
     def test_get_location_name(self):
         """
         Test extraction of the location name from the postcode API response.
         """
-        location_name = get_location_name(self.mock_postcode_response)
-        self.assertEqual(location_name, 'Westminster')
+        long, lat = get_postcode_long_lat(self.mock_postcode_response)
+        location_name = get_location_names(long, lat)[0]
+        self.assertEqual(location_name, 'London')
 
     def test_get_county(self):
         """
         Test extraction of the county from the postcode API response.
         """
-        county = get_county(self.mock_postcode_response)
+        long, lat = get_postcode_long_lat(self.mock_postcode_response)
+        county = get_location_names(long, lat)[1]
         self.assertEqual(county, 'Greater London')
 
     def test_get_country(self):
         """
         Test extraction of the country from the postcode API response.
         """
-        country = get_country(self.mock_postcode_response)
+        long, lat = get_postcode_long_lat(self.mock_postcode_response)
+        country = get_location_names(long, lat)[2]
         self.assertEqual(country, 'England')
 
 
