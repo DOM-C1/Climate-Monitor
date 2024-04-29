@@ -1,4 +1,4 @@
-"""Sets up the data for emailing out weather, air quality and flood alerts"""
+"""Sets up the data for emailing out weather, air quality and flood alerts."""
 
 from os import environ as ENV
 
@@ -19,7 +19,7 @@ def get_db_connection(config: dict):
 
 
 def select_email_list(conn: connection) -> list:
-    """gets the list of emails that should all be receiving an alert"""
+    """Gets the list of emails that should all be receiving an alert."""
 
     sql_query = """
     SELECT UD.email 
@@ -45,8 +45,8 @@ def select_email_list(conn: connection) -> list:
 
 
 def select_flood_warnings(conn: connection) -> list[list]:
-    """selects data from the database relating to flood alerts per user.
-    The data is returned as a list of lists"""
+    """Selects data from the database relating to flood alerts per user.
+    The data is returned as a list of lists."""
 
     sql_query = """SELECT FW.flood_id, SL.severity_level,
     L.loc_name, C.name, FW.time_raised, UD.email
@@ -68,8 +68,8 @@ def select_flood_warnings(conn: connection) -> list[list]:
 
 
 def select_weather_warnings(conn: connection) -> list[list]:
-    """selects data from the database relating to weather alerts per user.
-    The data is returned as a list of lists"""
+    """Selects data from the database relating to weather alerts per user.
+    The data is returned as a list of lists."""
 
     sql_query = """SELECT WA.alert_id, SL.severity_level, L.loc_name, C.name, AL.name,
     F.forecast_timestamp, WC.description, WR.report_time, 
@@ -97,8 +97,8 @@ def select_weather_warnings(conn: connection) -> list[list]:
 
 
 def select_air_warnings(conn: connection) -> list[list]:
-    """selects data from the database relating to air quality alerts per user.
-    The data is returned as a list of lists"""
+    """Selects data from the database relating to air quality alerts per user.
+    The data is returned as a list of lists."""
 
     sql_query = """SELECT AQ.air_quality_id,
     SL.severity_level, L.loc_name, C.name,
@@ -122,7 +122,7 @@ def select_air_warnings(conn: connection) -> list[list]:
 
 
 def emails_to_dict(emails: list[str]) -> dict:
-    """converts the list of emails to dictionaries with an empty list."""
+    """Converts the list of emails to dictionaries with an empty list."""
 
     email_dict = {}
     for email in emails:
@@ -181,6 +181,7 @@ def set_up_email_data(config: dict, tables: list[str]) -> dict:
         warnings = [[tables[-1]] + f for f in floods]
         warnings += [[tables[0]] + w for w in weather]
         warnings += [[tables[1]] + a for a in air]
+    conn.close()
     return sort_warnings_to_email(emails, warnings)
 
 

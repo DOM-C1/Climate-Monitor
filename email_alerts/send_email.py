@@ -1,4 +1,4 @@
-"""The main email alert script, calls every other script and sends the emails"""
+"""The main email alert script, calls every other script and sends the emails."""
 
 from os import environ as ENV
 from dotenv import load_dotenv
@@ -11,7 +11,8 @@ from update_alerts import update_all_alert_tables
 
 
 def send_email(email: str, message: str):
-    """sends an email report of plant sensor faults using AWS SES"""
+    """Sends an email report of plant sensor faults using AWS SES."""
+
     region = ENV['REGION']
     ses = boto3.client('ses', region_name=region)
     from_email = ENV['SENDER_EMAIL']

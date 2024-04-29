@@ -33,7 +33,7 @@ def get_alert_visual(alert):
 
 
 def create_html_table_weather(user_alerts: list[list[str]], weather_alert: str) -> str:
-    """creates an html table for weather warnings in an area."""
+    """Creates an html table for weather warnings in an area."""
 
     table_style = "'border: 1px solid  black;text-align: left;padding: 8px;'"""
 
@@ -62,7 +62,7 @@ def create_html_table_weather(user_alerts: list[list[str]], weather_alert: str) 
 
 
 def create_html_air_quality(user_alerts: list[list[str]], air_quality: str) -> str:
-    """creates the html message for air quality in the area."""
+    """Creates the html message for air quality in the area."""
 
     html_string = """"""
     for alert in user_alerts:
