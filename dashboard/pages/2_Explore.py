@@ -7,7 +7,6 @@ from psycopg2 import connect
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 import streamlit as st
-from vega_datasets import data
 import pydeck as pdk
 
 
@@ -50,12 +49,14 @@ def get_location_forecast_data(conn) -> pd.DataFrame:
                     """)
 
         rows = cur.fetchall()
+        print('LOCATIONS')
+        print(rows)
         data_f = pd.DataFrame.from_dict(rows)
 
     return data_f
 
 
-def get_locations_with_alerts():
+def get_locations_with_alerts(conn):
     """Get the loc_id and alert type if they exist in database"""
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""SET timezone='Europe/London'""")
@@ -71,10 +72,13 @@ def get_locations_with_alerts():
                     AND F.forecast_timestamp > NOW()
                     GROUP BY L.loc_id, "Alert type", "Severity", SL.severity_level_id
                     ORDER BY SL.severity_level_id DESC, L.loc_id ASC
-                    ;""")
+                    """)
 
         rows = cur.fetchall()
-        data_f = pd.DataFrame.from_dict(rows)
+        print('ALERTS')
+        print(rows)
+        print(type(rows))
+        data_f = pd.DataFrame(rows)
 
     return data_f
 
@@ -131,41 +135,42 @@ if __name__ == "__main__":
     st.title('Explore')
     with connect_to_db(ENV) as conn:
         forecast_d = get_location_forecast_data(conn)
-    with st.sidebar:
-        by_loc = st.checkbox("Search by location")
-        if by_loc:
-            loc_type = st.selectbox('Search by:',
-                                    ['Location', 'County', 'Country'])
-            if loc_type == 'Location':
-                location = st.selectbox('Locations',
-                                        forecast_d['Location'].sort_values().unique())
-            elif loc_type == 'County':
-                location = st.selectbox('Counties',
-                                        forecast_d['County'].sort_values().unique())
-            elif loc_type == 'Country':
-                location = st.selectbox('Locations',
-                                        forecast_d['Country'].sort_values().unique())
+        with st.sidebar:
+            by_loc = st.checkbox("Search by location")
+            if by_loc:
+                loc_type = st.selectbox('Search by:',
+                                        ['Location', 'County', 'Country'])
+                if loc_type == 'Location':
+                    location = st.selectbox('Locations',
+                                            forecast_d['Location'].sort_values().unique())
+                elif loc_type == 'County':
+                    location = st.selectbox('Counties',
+                                            forecast_d['County'].sort_values().unique())
+                elif loc_type == 'Country':
+                    location = st.selectbox('Locations',
+                                            forecast_d['Country'].sort_values().unique())
 
-    if by_loc:
-        lat, lon, county = forecast_d[forecast_d[loc_type] == location][[
-            'latitude', 'longitude', 'County']].values[0]
-        forecast_d = forecast_d[forecast_d['Forecast time']
-                                == time_rounder(datetime.now())]
-        w_map = get_map(forecast_d, lat, lon, loc_type)
-    else:
-        alerts = get_locations_with_alerts()
-        print(alerts)
-        for _, alert in alerts.iterrows():
-            if alert["Severity"] == "Alert":
-                icon = "❕"
-            elif alert["Severity"] == "Warning":
-                icon = "⚠️"
-            elif alert["Severity"] == "Severe Warning":
-                icon = "🚨"
-            if alert["min_time"] != alert["max_time"]:
-                st.warning(
-                    f'**{alert["Location"]}** has a **{alert["Alert type"]} {alert["Severity"]}** from **{alert["min_time"]}** to **{alert["max_time"]}**.', icon=icon)
-            else:
-                st.error(
-                    f'**{alert["Location"]}** has a **{alert["Alert type"]} {alert["Severity"]}** at **{alert["min_time"]}**.', icon=icon)
-        w_map = get_map(forecast_d, 52.536, -2.5341, 'UK')
+        if by_loc:
+            lat, lon, county = forecast_d[forecast_d[loc_type] == location][[
+                'latitude', 'longitude', 'County']].values[0]
+            forecast_d = forecast_d[forecast_d['Forecast time']
+                                    == time_rounder(datetime.now())]
+            w_map = get_map(forecast_d, lat, lon, loc_type)
+        else:
+            alerts = get_locations_with_alerts(conn)
+            print(alerts)
+            for _, alert in alerts.iterrows():
+                if alert["Severity"] == "Alert":
+                    icon = "❕"
+                elif alert["Severity"] == "Warning":
+                    icon = "⚠️"
+                elif alert["Severity"] == "Severe Warning":
+                    icon = "🚨"
+                if alert["min_time"] != alert["max_time"]:
+                    st.warning(
+                        f'**{alert["Location"]}** has a **{alert["Alert type"]} {alert["Severity"]}** from **{alert["min_time"]}** to **{alert["max_time"]}**.', icon=icon)
+                else:
+                    st.warning(
+                        f'**{alert["Location"]}** has a **{alert["Alert type"]} {alert["Severity"]}** at **{alert["min_time"]}**.', icon=icon)
+            w_map = get_map(forecast_d, 52.536, -2.5341, 'UK')
+    conn.close()
