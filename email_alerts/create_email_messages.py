@@ -53,7 +53,7 @@ def create_html_table_weather(user_alerts: list[list[str]], weather_alert: str) 
     table_style = "'border: 1px solid  black;text-align: left;padding: 8px;'"""
 
     output = ''
-    table = """<table style=
+    table = """<h2>Extreme Weather:</h2><table style=
     border-collapse: collapse;
     padding: 2rem 0.5rem;
     background-color: white;'>
@@ -86,7 +86,7 @@ def create_html_air_quality(user_alerts: list[list[str]], air_quality: str) -> s
             continue
         if alert[SEV_LEVEL_POS] == 'Warning no longer in force':
             continue
-        air_warning = """<h3><span style='border: 1px solid  black;
+        air_warning = """<h2>Air Quality:</h2><h3><span style='border: 1px solid  black;
         background-color: {}; text-align: center; font-size: 35px;
         display: inline-block; width:20px;'>!</span> {} in {}</h3>"""
         air_warning = air_warning.format(get_alert_visual(alert[SEV_LEVEL_POS]), get_alert_msg(
@@ -104,7 +104,7 @@ def create_html_flood_alerts(user_alerts: list[list[str]], flood_alert: str) -> 
             continue
         if alert[SEV_LEVEL_POS] == 'Warning no longer in force':
             continue
-        flood_alert = """<h3><span style='border: 1px solid  black;
+        flood_alert = """<h2>Flood Alerts:</h2><h3><span style='border: 1px solid  black;
         background-color: {}; text-align: center; font-size: 35px;
         display: inline-block; width:20px;'>!</span> {} in {} - {}</h3>"""
         flood_alert = flood_alert.format(get_alert_visual(alert[SEV_LEVEL_POS]), get_alert_msg(
@@ -123,7 +123,7 @@ def create_full_html_per_user(users_weather: list[list], tables: list[str]) -> s
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head><body style=''font-family: arial, sans-serif; background-color:
     white; justify-content: center;align-items: center;'>
-    <h1>!!!!!Weather Alerts!!!!!</h1>"""
+    <h1>!-!-!-!-!- Weather Alerts -!-!-!-!-!</h1>"""
     weather_alerts_data = create_html_table_weather(users_weather, tables[0])
     air_quality_data = create_html_air_quality(users_weather, tables[1])
     flood_warning_data = create_html_flood_alerts(users_weather, tables[2])
