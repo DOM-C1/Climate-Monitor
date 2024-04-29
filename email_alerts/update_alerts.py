@@ -1,4 +1,4 @@
-"""update the alerts within the database to show they have been notified"""
+"""Update the alerts within the database to show they have been notified."""
 
 from os import environ as ENV
 
@@ -18,7 +18,7 @@ def get_db_connection(config: dict):
 
 
 def update_weather_alert(conn: connection, table_id: int) -> bool:
-    """update the air quality table notified column notified to true."""
+    """Update the air quality table notified column notified to true."""
     sql_query = """UPDATE weather_alert
                         SET
                         notified = True
@@ -30,7 +30,7 @@ def update_weather_alert(conn: connection, table_id: int) -> bool:
 
 
 def update_flood_alert(conn: connection, table_id: int) -> bool:
-    """update the air quality table notified column notified to true."""
+    """Update the air quality table notified column notified to true."""
     sql_query = """UPDATE flood_warnings
                         SET
                         notified = True
@@ -42,7 +42,7 @@ def update_flood_alert(conn: connection, table_id: int) -> bool:
 
 
 def update_air_alert(conn: connection, table_id: int) -> bool:
-    """update the air quality table notified column to true."""
+    """Update the air quality table notified column to true."""
     sql_query = """UPDATE air_quality
                         SET
                         notified = True
@@ -55,7 +55,7 @@ def update_air_alert(conn: connection, table_id: int) -> bool:
 
 
 def update_all_alert_tables(config: dict, recipients: dict) -> None:
-    """sorts through all the alerts and updates their respective row in the database."""
+    """Sorts through all the alerts and updates their respective row in the database."""
 
     weather_alert = ENV['WEATHER_WARNING_TABLE']
     flood_alert = ENV['FLOOD_WARNING_TABLE']
@@ -71,4 +71,5 @@ def update_all_alert_tables(config: dict, recipients: dict) -> None:
                     update_air_alert(conn, alert[1])
                 if alert[0] == flood_alert:
                     update_flood_alert(conn, alert[1])
+    conn.close()
     print('Finished')
