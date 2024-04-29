@@ -28,11 +28,7 @@ def get_location(address: dict) -> str:
 
 def get_county(address: dict) -> str:
     """Extract the county name of a location."""
-    if 'county' in address:
-        return address['county']
-    if 'state_district' in address:
-        return address['state_district']
-    return ""
+    return address["county"] if "county" in address else address.get("state_district", "")
 
 
 def get_country(address: dict) -> str:
@@ -62,7 +58,6 @@ def get_location_names(longitude: float, latitude: float) -> tuple[str]:
         location = county
     if not county:
         county = location
-    print(location)
     return location, county, country
 
 
