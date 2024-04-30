@@ -4,3 +4,7 @@ venv
 __pycache__
 .pytest_cache
 .DS_Store
+*.tfvars
+*.tfstate
+*.tfstate.backup
+*.terraform.lock.hcl
