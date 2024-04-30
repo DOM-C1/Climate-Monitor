@@ -24,6 +24,7 @@ def submit_user():
     postcode = request.form['postcode']
     details = get_details_from_post_code(postcode)
     conn = get_db_connection(ENV)
+    print(type(conn))
     user_id = get_id('user_details', 'email', email, conn)
     if user_id == -1:
         return render_template('user_not_found.html')
