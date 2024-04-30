@@ -53,7 +53,7 @@ def get_country(address: dict) -> str:
 
 def get_location_names(latitude: float, longitude: float) -> tuple[str]:
     """Extract the location names from a longitude and latitude."""
-    geolocator = Nominatim(user_agent="my_application")
+    geolocator = Nominatim(user_agent="my_application", timeout=10)
     location_obj = geolocator.reverse(
         f"{latitude}, {longitude}")
     address = location_obj.raw['address']
