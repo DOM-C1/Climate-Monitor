@@ -50,8 +50,9 @@ def delete_weather_forecast(conn: connection) -> None:
 def delete_air_quality(conn: connection) -> None:
     """Delete out of date air quality reports."""
 
-    sql_query = """DELETE FROM air_quality WHERE 
-                weather_report_id IN (SELECT WR.weather_report_id FROM weather_report AS WR WHERE WR.report_time < CURRENT_TIMESTAMP - INTERVAL '1 day');
+    sql_query = """DELETE FROM air_quality WHERE
+                weather_report_id IN (SELECT WR.weather_report_id FROM weather_report 
+                AS WR WHERE WR.report_time < CURRENT_TIMESTAMP - INTERVAL '1 day');
                 """
 
     with conn.cursor() as cur:
@@ -62,7 +63,8 @@ def delete_air_quality(conn: connection) -> None:
 def delete_weather_reports(conn: connection) -> None:
     """Delete out of date weather reports."""
 
-    sql_query = """DELETE FROM weather_report WHERE (weather_report_id NOT IN (SELECT F.weather_report_id FROM forecast AS F))
+    sql_query = """DELETE FROM weather_report WHERE
+    (weather_report_id NOT IN (SELECT F.weather_report_id FROM forecast AS F))
     AND (weather_report_id NOT IN (SELECT AQ.weather_report_id FROM air_quality AS AQ));
                 """
 
@@ -74,7 +76,8 @@ def delete_weather_reports(conn: connection) -> None:
 def delete_flood_warnings(conn: connection) -> None:
     """Delete out of date flood warnings."""
 
-    sql_query = """DELETE FROM flood_warnings WHERE time_raised < CURRENT_TIMESTAMP - INTERVAL '7 days';"""
+    sql_query = """DELETE FROM flood_warnings
+    WHERE time_raised < CURRENT_TIMESTAMP - INTERVAL '7 days';"""
 
     with conn.cursor() as cur:
         cur.execute(sql_query)
@@ -93,6 +96,8 @@ def clear_the_data(config: connection) -> None:
     conn.close()
 
 
-if __name__ == "__main__":
+def handler(event: list[dict], context: dict = None) -> None:
+    """AWS Lambda function handler of the delete function."""
+
     load_dotenv()
     clear_the_data(ENV)
