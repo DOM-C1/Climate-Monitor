@@ -211,4 +211,4 @@ load_dotenv()
 conn = get_db_connection(ENV)
 df = prepare_data_frame(conn)
 
-print(df[df['loc_id_user'] == 81])
+print(df['loc_id_user'].unique())
