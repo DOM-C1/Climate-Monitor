@@ -52,6 +52,7 @@ def send_to_each_recipient(config: dict, tables: list[str]) -> None:
         if not recipients_msg.get(key):
             continue
         send_email(key, recipients_msg.get(key))
+        print(recipients_msg.get(key))
     update_all_alert_tables(config, recipients_alerts)
 
 
