@@ -57,6 +57,8 @@ def send_to_each_recipient(config: dict, tables: list[str]) -> None:
 
 
 def handler(event: list[dict], context: dict = None) -> None:
+    """AWS Lambda handler to run the script."""
+
     load_dotenv()
     flood_alert = ENV['FLOOD_WARNING_TABLE']
     air_quality = ENV['AIR_QUALITY_TABLE']
