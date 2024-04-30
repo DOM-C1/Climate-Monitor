@@ -29,3 +29,7 @@ variable "DB_NAME" {
 variable "API_KEY" {
     type = string
 }
+
+variable "REGION" {
+    type = string
+}
