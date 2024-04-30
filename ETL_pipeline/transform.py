@@ -4,8 +4,6 @@ from itertools import zip_longest
 
 import pandas as pd
 
-from extract import get_air_quality, get_weather_details_for_24hrs, get_weather_details_for_week
-
 
 def rename_columns(data: pd.DataFrame) -> pd.DataFrame:
     """Rename the dataframe columns to match database."""
