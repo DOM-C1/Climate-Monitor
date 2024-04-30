@@ -1,9 +1,12 @@
-"""update the alerts within the database to show they have been notified"""
+"""Update the alerts within the database to show they have been notified."""
 
 from os import environ as ENV
 
 from psycopg2 import connect
 from psycopg2.extensions import connection
+
+
+TABLE_ID_POS = 1
 
 
 def get_db_connection(config: dict):
@@ -17,20 +20,20 @@ def get_db_connection(config: dict):
     )
 
 
-def update_weather_alert(conn: connection, table_id: int) -> bool:
-    """update the air quality table notified column notified to true."""
+def update_weather_alert(conn: connection) -> bool:
+    """Update the weather alert table based on forecast_id and alert_type_id. 
+    Notified is updated to to true."""
     sql_query = """UPDATE weather_alert
                         SET
                         notified = True
-                        WHERE alert_id = %s
                         ;"""
     with conn.cursor() as cur:
-        cur.execute(sql_query, (table_id,))
+        cur.execute(sql_query)
     conn.commit()
 
 
 def update_flood_alert(conn: connection, table_id: int) -> bool:
-    """update the air quality table notified column notified to true."""
+    """Update the flood alert table so notified is true."""
     sql_query = """UPDATE flood_warnings
                         SET
                         notified = True
@@ -42,7 +45,7 @@ def update_flood_alert(conn: connection, table_id: int) -> bool:
 
 
 def update_air_alert(conn: connection, table_id: int) -> bool:
-    """update the air quality table notified column to true."""
+    """Update the air quality table so notified is true."""
     sql_query = """UPDATE air_quality
                         SET
                         notified = True
@@ -55,7 +58,7 @@ def update_air_alert(conn: connection, table_id: int) -> bool:
 
 
 def update_all_alert_tables(config: dict, recipients: dict) -> None:
-    """sorts through all the alerts and updates their respective row in the database."""
+    """Sorts through all the alerts and updates their respective row in the database."""
 
     weather_alert = ENV['WEATHER_WARNING_TABLE']
     flood_alert = ENV['FLOOD_WARNING_TABLE']
@@ -66,9 +69,10 @@ def update_all_alert_tables(config: dict, recipients: dict) -> None:
                 continue
             for alert in recipients.get(key):
                 if alert[0] == weather_alert:
-                    update_weather_alert(conn, alert[1])
+                    update_weather_alert(conn)
                 if alert[0] == air_quality:
-                    update_air_alert(conn, alert[1])
+                    update_air_alert(conn, alert[TABLE_ID_POS])
                 if alert[0] == flood_alert:
-                    update_flood_alert(conn, alert[1])
+                    update_flood_alert(conn, alert[TABLE_ID_POS])
+    conn.close()
     print('Finished')
