@@ -56,7 +56,7 @@ def send_to_each_recipient(config: dict, tables: list[str]) -> None:
     update_all_alert_tables(config, recipients_alerts)
 
 
-if __name__ == '__main__':
+def handler(event: list[dict], context: dict = None) -> None:
     load_dotenv()
     flood_alert = ENV['FLOOD_WARNING_TABLE']
     air_quality = ENV['AIR_QUALITY_TABLE']
