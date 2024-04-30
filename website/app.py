@@ -2,8 +2,7 @@
 from os import environ as ENV
 
 from dotenv import load_dotenv
-from flask import Flask, request, render_template
-
+from flask import Flask, request
 from utils import get_details_from_post_code
 from utils_db import get_db_connection, get_id, setup_user_location, get_value_from_db
 
@@ -11,25 +10,16 @@ from utils_db import get_db_connection, get_id, setup_user_location, get_value_f
 app = Flask(__name__)
 
 
-@app.route('/')
-def homepage():
-    """This displays the homepage."""
-    return render_template('newsletter.html')
-
-
 @app.route('/submit-location', methods=['POST'])
 def submit_user():
     """When a request is sent, the users new location is sent to the database."""
-    email = request.form['email']
-    postcode = request.form['postcode']
+    data = request.json
+    postcode = data['postcode']
+    email = data['email']
     details = get_details_from_post_code(postcode)
     conn = get_db_connection(ENV)
     user_id = get_id('user_details', 'email', email, conn)
-    if user_id == -1:
-        return render_template('user_not_found.html')
 
-    if details['status'] != 200:
-        return render_template('page_not_found.html')
     alert_on = get_value_from_db(
         'user_location_assignment', 'alert_opt_in', user_id, 'user_id', conn)
     report_on = get_value_from_db(
@@ -40,29 +30,22 @@ def submit_user():
     return 'Location added!'
 
 
-@app.route('/location')
-def location_page():
-    """Displays the HTML on the website for the location route."""
-    return render_template('location_form.html')
-
-
 @app.route('/submit-user', methods=['POST'])
 def submit_location():
     """When a user signs-up, it gets sent through here and uploaded
        to the database."""
-    location_value = request.form['location']
-    name = request.form['name']
-    email = request.form['email']
-    sub_newsletter = request.form.get('newsletter', 'off') == 'on'
-    sub_alerts = request.form.get('alerts', 'off') == 'on'
+    data = request.json
+    location_value = data['location']
+    name = data['name']
+    email = data['email']
+    sub_newsletter = data['newsletter', 'off']
+    sub_alerts = data['alerts']
     details = get_details_from_post_code(location_value)
     conn = get_db_connection(ENV)
     if details['status'] == 200:
         setup_user_location(details, name, email,
                             sub_newsletter, sub_alerts, conn)
         return 'User Added!'
-
-    return render_template('cant_be_found_page.html')
 
 
 if __name__ == '__main__':
