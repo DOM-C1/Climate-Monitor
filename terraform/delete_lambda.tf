@@ -41,5 +41,5 @@ resource "aws_lambda_function" "c10-climate-delete-terraform" {
         }
       
     }
-    timeout = 360
+    timeout = 10
 }

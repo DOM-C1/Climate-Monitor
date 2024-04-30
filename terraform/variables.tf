@@ -33,3 +33,19 @@ variable "API_KEY" {
 variable "REGION" {
     type = string
 }
+
+variable "AIR_QUALITY_TABLE" {
+    type = string
+}
+
+variable "FLOOD_WARNING_TABLE" {
+    type = string
+}
+
+variable "SENDER_EMAIL" {
+    type = string
+}
+
+variable "WEATHER_WARNING_TABLE" {
+    type = string
+}
