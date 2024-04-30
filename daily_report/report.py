@@ -8,7 +8,7 @@ import pandas as pd
 from boto3 import client
 from dotenv import load_dotenv
 from psycopg2 import connect
-
+from psycopg2.extras import connection
 
 WEATHER_EMOJIS = {
     "Clear Sky": "☀️",
@@ -61,7 +61,7 @@ async def main() -> None:
     conn.close()
 
 
-def get_db_connection(config: dict) -> connect:
+def get_db_connection(config: dict) -> connection:
     """Establishes a database connection using provided configuration."""
     return connect(
         user=config["DB_USER"],
@@ -72,7 +72,7 @@ def get_db_connection(config: dict) -> connect:
     )
 
 
-def execute_query(conn: connect, query: str) -> pd.DataFrame:
+def execute_query(conn: connection, query: str) -> pd.DataFrame:
     """Executes a SQL query and returns the results as a pandas DataFrame."""
     with conn.cursor() as cur:
         cur.execute(query)
@@ -82,7 +82,7 @@ def execute_query(conn: connect, query: str) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=columns)
 
 
-def prepare_data_frame(conn: connect) -> pd.DataFrame:
+def prepare_data_frame(conn: connection) -> pd.DataFrame:
     """Prepares a complete data frame combining user details with weather forecasts."""
     user_details_query = """
         SELECT *
@@ -114,7 +114,7 @@ def add_unicode(cell: str) -> str:
     return f"{cell} {WEATHER_EMOJIS[cell]}"
 
 
-async def send_email(ses: client, html_content: str, recipient: str):
+async def send_email(ses: client, html_content: str, recipient: str) -> None:
     """Async function to send email using AWS SES."""
     try:
         response = await ses.send_email(
@@ -210,7 +210,3 @@ async def format_forecast_report(df: pd.DataFrame, target_email: str) -> str:
 
         reports += f"<h2>{location}</h2>{html}"
     return format_html(reports)
-
-load_dotenv()
-conn = get_db_connection(ENV)
-print(type(conn))
