@@ -59,8 +59,11 @@ def insert_weather_report(conn: connection, location_id: int) -> int:
 def check_forecasts(conn: connection, forecast: dict) -> int:
     """Check if a forecast with a matching timestamp and return it's id."""
     sql_query = f"""
-        SELECT forecast_id FROM forecast 
-        WHERE forecast_timestamp = '{forecast["forecast_timestamp"]}'
+        SELECT forecast_id FROM forecast AS f
+        JOIN weather_report AS wr
+        ON (wr.weather_report_id = f.weather_report_id)
+        WHERE f.forecast_timestamp = '{forecast["forecast_timestamp"]}'
+        AND wr.loc_id = {location_id}
         """
     with conn.cursor() as cur:
         cur.execute(sql_query)
