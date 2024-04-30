@@ -49,9 +49,9 @@ def get_location_forecast_data(_conn) -> pd.DataFrame:
                     JOIN weather_code as wc
                     ON (f.weather_code_id=wc.weather_code_id)
                     WHERE F.forecast_timestamp < NOW() + interval '12 hours'
-                    AND EXTRACT(minutes from F.forecast_timestamp) = 0
-                    AND EXTRACT(hours from F.forecast_timestamp) % 2 = 0
+                    AND F.forecast_timestamp > NOW() - interval '15 minutes'
                     GROUP BY "Forecast time", l.loc_id, "County", "Country", "Weather"
+                    ORDER BY f.forecast_timestamp
                     """)
 
         rows = cur.fetchall()
