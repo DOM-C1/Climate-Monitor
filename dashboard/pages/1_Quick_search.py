@@ -56,7 +56,6 @@ def get_location_forecast_data(_conn) -> pd.DataFrame:
 
         rows = cur.fetchall()
         data_f = pd.DataFrame.from_dict(rows)
-    print(data_f)
 
     return data_f
 
@@ -245,17 +244,26 @@ if __name__ == "__main__":
         current_weather = forecast_d_loc[forecast_d_loc["Forecast time"] == time_rounder(
             datetime.now())]
         current_weather = get_current_weather(conn, location)
-        print(current_weather)
 
         col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
             st.metric("Weather", current_weather['Weather'].values[0])
+        with col2:
             st.metric("Temperature",
                       f"{current_weather['temperature'].values[0]}°C")
+        with col3:
             st.metric("Feels like",
                       f"{current_weather['apparent_temp'].values[0]}°C")
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col1:
             st.metric("Cloud cover",
                       f"{current_weather['cloud_cover'].values[0]}%")
+            st.metric("Chance of rain",
+                      f"{current_weather['precipitation_prob'].values[0]}%")
+            st.metric("Wind speed",
+                      f"{current_weather['wind_speed'].values[0]} km/h")
+            st.metric("Wind gusts",
+                      f"{current_weather['wind_gusts'].values[0]} km/h")
 
         with col2:
             st.write("Wind direction")
@@ -263,19 +271,7 @@ if __name__ == "__main__":
             st.altair_chart(
                 compass(current_weather['wind_direction'].values[0]), theme=None)
             st.markdown("# ")
-        col1, col2, col3, col4 = st.columns(4)
 
-        with col1:
-            st.metric("Chance of rain",
-                      f"{current_weather['precipitation_prob'].values[0]}%")
-        with col2:
-            st.metric("Wind speed",
-                      f"{current_weather['wind_speed'].values[0]}km/h")
-
-        with col3:
-
-            st.metric("Wind gusts",
-                      f"{current_weather['wind_gusts'].values[0]}km/h")
         st.markdown("#")
 
         # st.altair_chart(alt.Chart(current_weather).mark_bar().encode(
@@ -289,7 +285,7 @@ if __name__ == "__main__":
 
         st.markdown("## Today's forecast")
         st.write("average temp, modal weather code, etc.")
-        st.write(forecast_d_loc)
+        st.table(forecast_d_loc)
         st.markdown("## This week's forecast")
         st.write(forecast_d_loc)
         get_map(forecast_d, lon, lat)
