@@ -4,4 +4,3 @@ venv
 __pycache__
 .pytest_cache
 .DS_Store
- */Lambda_files

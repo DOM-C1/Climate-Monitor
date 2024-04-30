@@ -58,6 +58,7 @@ async def main() -> None:
         tasks = [asyncio.create_task(send_email(ses, await format_forecast_report(df, email), email))
                  for email in df['email'].unique()]
         await asyncio.gather(*tasks)
+    conn.close()
 
 
 def get_db_connection(config: dict) -> connect:
@@ -88,22 +89,24 @@ def prepare_data_frame(conn: connect) -> pd.DataFrame:
         FROM user_details AS UD
         JOIN user_location_assignment ON UD.user_id = user_location_assignment.user_id
         JOIN location ON user_location_assignment.loc_id = location.loc_id
-        JOIN weather_report ON location.loc_id = weather_report.loc_id;
+        JOIN weather_report ON location.loc_id = weather_report.loc_id
     """
     forecast_query = """
         SELECT *
-        FROM forecast F
+        FROM forecast AS F
         JOIN weather_code WC ON F.weather_code_id = WC.weather_code_id
-        JOIN weather_report WR ON F.weather_report_id = WR.weather_report_id;
+        JOIN weather_report WR ON F.weather_report_id = WR.weather_report_id
     """
     user_details = execute_query(conn, user_details_query)
-    forecast_details = execute_query(conn, forecast_query)
+    forecast_details = execute_query(conn, forecast_query).drop_duplicates()
     forecast_details = forecast_details.loc[:,
                                             ~forecast_details.columns.duplicated()]
 
     combined_df = pd.merge(user_details, forecast_details,
                            on='weather_report_id', suffixes=('_user', '_forecast'))
-    return combined_df
+    combined_df = combined_df.loc[:,
+                                  ~combined_df.columns.duplicated()]
+    return combined_df[combined_df['report_opt_in'] == True]
 
 
 def add_unicode(cell: str) -> str:
@@ -128,6 +131,12 @@ async def send_email(ses: client, html_content: str, recipient: str):
         print("Error sending email:", e)
 
 
+def format_time(hour: int) -> str:
+    if hour < 10:
+        return f"0{hour}:00"
+    return f"{hour}:00"
+
+
 async def format_forecast_report(df: pd.DataFrame, target_email: str) -> str:
     """Formats the filtered forecast data into HTML for sending as an email."""
     filtered_df = df[df['email'] == target_email]
@@ -137,8 +146,11 @@ async def format_forecast_report(df: pd.DataFrame, target_email: str) -> str:
     for location in filtered_df['loc_name'].unique():
         loc_df = filtered_df[filtered_df['loc_name'] == location]
         loc_df = loc_df[loc_df['forecast_timestamp'].dt.date == today]
-        loc_df['forecast_timestamp'] = loc_df['forecast_timestamp'].dt.hour.apply(
-            lambda x: str(x) + ":00")
+        loc_df['forecast_timestamp'] = loc_df['forecast_timestamp'].dt.hour
+        loc_df = loc_df[loc_df['forecast_timestamp'] >= 7]
+        loc_df = loc_df.sort_values(by='forecast_timestamp', ascending=True)
+        loc_df['forecast_timestamp'] = loc_df['forecast_timestamp'].apply(
+            format_time)
 
         aggregated_df = loc_df.groupby('forecast_timestamp').agg({
             'temperature': 'mean',
@@ -195,3 +207,8 @@ async def format_forecast_report(df: pd.DataFrame, target_email: str) -> str:
     </body>
     </html>
     """
+load_dotenv()
+conn = get_db_connection(ENV)
+df = prepare_data_frame(conn)
+
+print(df[df['loc_id_user'] == 81])

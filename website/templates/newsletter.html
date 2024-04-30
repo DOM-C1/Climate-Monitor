@@ -4,12 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up for Our Newsletter</title>
-    <link rel="stylesheet" href="index.css"> <!-- Link to the CSS file -->
+    <link rel="stylesheet" href="index.css">
+    <style>
+        .blank-line {
+            margin-bottom: 20px; 
+        }
+    </style>
 </head>
 <body>
 
 <h1>Sign-up for our newsletter</h1>
 
+<a href="/location">Already a user and want to add a location? Go here</a> 
+<div class="blank-line"></div> 
 <form action="/submit-user" method="post">
     <div>
         <label for="name">Name</label>
@@ -23,12 +30,12 @@
     
     <div>
         <label for="location">Location - Please enter your full postcode</label>
-        <input type="text" id="location" name="location" placeholder="e.g. AB12 3CD" required> <!-- Corrected syntax error -->
+        <input type="text" id="location" name="location" placeholder="e.g. AB12 3CD" required> 
     </div>
     
     <div>
         <input type="checkbox" id="newsletter" name="newsletter">
-        <label for="newsletter">Sign-up for the newsletter</label>
+        <label for="newsletter">Sign-up for the daily newsletter</label>
     </div>
     
     <div>
