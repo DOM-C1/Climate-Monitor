@@ -1,4 +1,4 @@
-data "aws_iam_policy_document" "lambda-role-policy" {
+data "aws_iam_policy_document" "pipeline-lambda-role-policy" {
   statement {
     effect = "Allow"
 
@@ -11,25 +11,25 @@ data "aws_iam_policy_document" "lambda-role-policy" {
   }
 }
 
-resource "aws_iam_role" "lambda-role" {
+resource "aws_iam_role" "pipeline-lambda-role" {
   name               = "c10-climate-terraform-lambda-role-pipeline"
-  assume_role_policy = data.aws_iam_policy_document.lambda-role-policy.json
+  assume_role_policy = data.aws_iam_policy_document.pipeline-lambda-role-policy.json
 }
 
-data "aws_ecr_repository" "lambda-ecr-repo" {
+data "aws_ecr_repository" "pipeline-repo" {
   name = "c10-climate-pipeline"
 }
 
-data "aws_ecr_image" "lambda-image" {
-  repository_name = data.aws_ecr_repository.lambda-ecr-repo.name
+data "aws_ecr_image" "pipeline-image" {
+  repository_name = data.aws_ecr_repository.pipeline-repo.name
   image_tag       = "latest"
 }
 
-resource "aws_lambda_function" "c10-climate-terraform-lambda-pipeline" {
-    role = aws_iam_role.lambda-role.arn
-    function_name = "c10-climate-terraform-lambda-pipeline"
+resource "aws_lambda_function" "c10-climate-pipeline-terraform" {
+    role = aws_iam_role.pipeline-lambda-role.arn
+    function_name = "c10-climate-pipeline-terraform"
     package_type = "Image"
-    image_uri = data.aws_ecr_image.lambda-image.image_uri
+    image_uri = data.aws_ecr_image.pipeline-image.image_uri
     environment {
         variables = {
           API_KEY = var.API_KEY,
