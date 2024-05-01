@@ -12,7 +12,7 @@ def get_lat_lon(county: str) -> tuple[float]:
     """Get the latitude and longitude from a county."""
     geolocator = Nominatim(user_agent="my_application", timeout=10)
     location = geolocator.geocode(county)
-    return round(location.latitude, 7), round(location.longitude, 7)
+    return round(float(location.latitude), 7), round(float(location.longitude), 7)
 
 
 def convert_dtypes(data: pd.DataFrame) -> pd.DataFrame:
@@ -30,7 +30,7 @@ def clean_data(data: pd.DataFrame) -> pd.DataFrame:
     data['timeMessageChanged'] = data['timeMessageChanged'].apply(
         pd.to_datetime)
     data = data[data['timeMessageChanged'] >
-                datetime.now() - timedelta(hours=1)]
+                datetime.now() - timedelta(hours=10)]
     data.loc[:, 'floodArea'] = data.loc[:, 'floodArea'].apply(
         lambda x: x['county'].split(', '))
     data = data.explode('floodArea')
