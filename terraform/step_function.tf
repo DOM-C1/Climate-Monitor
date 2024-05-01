@@ -19,7 +19,7 @@ resource "aws_sfn_state_machine" "c10-climate-step-function-pipeline" {
               "Resource": "arn:aws:states:::lambda:invoke",
               "Parameters": {
                 "Payload.$": "$",
-                "FunctionName": "${aws_lambda_function.c10-location-splitter-terraform.arn}"
+                "FunctionName": "${aws_lambda_function.c10-location-splitter.arn}"
               },
               "Retry": [
                 {
@@ -51,7 +51,7 @@ resource "aws_sfn_state_machine" "c10-climate-step-function-pipeline" {
                     "OutputPath": "$.Payload",
                     "Parameters": {
                       "Payload.$": "$",
-                      "FunctionName": "${aws_lambda_function.c10-climate-pipeline-terraform.arn}"
+                      "FunctionName": "${aws_lambda_function.c10-climate-pipeline.arn}"
                     },
                     "Retry": [
                       {
@@ -84,7 +84,7 @@ resource "aws_sfn_state_machine" "c10-climate-step-function-pipeline" {
               "OutputPath": "$.Payload",
               "Parameters": {
                 "Payload.$": "$",
-                "FunctionName": "${aws_lambda_function.c10-climate-flood-warnings-terraform.arn}"
+                "FunctionName": "${aws_lambda_function.c10-climate-flood-warnings.arn}"
               },
               "Retry": [
                 {
@@ -112,7 +112,7 @@ resource "aws_sfn_state_machine" "c10-climate-step-function-pipeline" {
       "OutputPath": "$.Payload",
       "Parameters": {
         "Payload.$": "$",
-        "FunctionName": "${aws_lambda_function.c10-climate-email-alert-terraform.arn}"
+        "FunctionName": "${aws_lambda_function.c10-climate-email-alert.arn}"
       },
       "Retry": [
         {
