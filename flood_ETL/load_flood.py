@@ -67,10 +67,11 @@ def get_location_names(latitude: float, longitude: float) -> tuple[str]:
     return location, county, country
 
 
-def insert_location(conn: connection, latitude: float, longitude: float) -> int:
+def insert_location(conn: connection, latitude: float,
+                    longitude: float, location: str,
+                    county: str, country: str) -> int:
     """Insert a location into the database, and it's associated county 
     and country where they don't already exist."""
-    location, county, country = get_location_names(latitude, longitude)
     if country:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
@@ -98,13 +99,15 @@ def insert_location(conn: connection, latitude: float, longitude: float) -> int:
 
 def get_location_id(conn: connection, latitude: float, longitude: float) -> int:
     """Obtain the location id from the database."""
+
+    location, county, country = get_location_names(latitude, longitude)
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(f"""SELECT loc_id FROM location
-                    WHERE latitude = {latitude}
-                    AND longitude = {longitude}""")
+                    WHERE loc_name = '{location}'""")
         loc_id = cur.fetchone()
     if not loc_id:
-        loc_id = insert_location(conn, latitude, longitude)
+        loc_id = insert_location(
+            conn, latitude, longitude, location, county, country)
     if loc_id:
         return loc_id["loc_id"]
     return 0
