@@ -34,7 +34,7 @@ resource "aws_lambda_function" "c10-climate-daily-report" {
         variables = {
           AWS_KEY = var.AWS_KEY,
           AWS_SKEY = var.AWS_SKEY,
-          DB_HOST = var.DB_HOST,
+          DB_HOST = aws_db_instance.climate-db.endpoint,
           DB_NAME = var.DB_NAME,
           DB_PASSWORD = var.DB_PASSWORD,
           DB_PORT = var.DB_PORT,
@@ -61,7 +61,7 @@ resource "aws_lambda_function" "c10-climate-delete" {
     image_uri = data.aws_ecr_image.delete-image.image_uri
     environment {
         variables = {
-          DB_HOST = var.DB_HOST,
+          DB_HOST = aws_db_instance.climate-db.endpoint,
           DB_NAME = var.DB_NAME,
           DB_PASSWORD = var.DB_PASSWORD,
           DB_PORT = var.DB_PORT,
@@ -89,7 +89,7 @@ resource "aws_lambda_function" "c10-climate-email-alert" {
     image_uri = data.aws_ecr_image.email-alert-image.image_uri
     environment {
         variables = {
-          DB_HOST = var.DB_HOST,
+          DB_HOST = aws_db_instance.climate-db.endpoint,
           DB_NAME = var.DB_NAME,
           DB_PASSWORD = var.DB_PASSWORD,
           DB_PORT = var.DB_PORT,
@@ -121,7 +121,7 @@ resource "aws_lambda_function" "c10-climate-flood-warnings" {
     image_uri = data.aws_ecr_image.flood-warnings-image.image_uri
     environment {
         variables = {
-          DB_HOST = var.DB_HOST,
+          DB_HOST = aws_db_instance.climate-db.endpoint,
           DB_NAME = var.DB_NAME,
           DB_PASSWORD = var.DB_PASSWORD,
           DB_PORT = var.DB_PORT,
@@ -148,7 +148,7 @@ resource "aws_lambda_function" "c10-location-splitter" {
     image_uri = data.aws_ecr_image.location-splitter-image.image_uri
     environment {
         variables = {
-          DB_HOST = var.DB_HOST,
+          DB_HOST = aws_db_instance.climate-db.endpoint,
           DB_NAME = var.DB_NAME,
           DB_PASSWORD = var.DB_PASSWORD,
           DB_PORT = var.DB_PORT,
@@ -176,7 +176,7 @@ resource "aws_lambda_function" "c10-climate-pipeline" {
     environment {
         variables = {
           API_KEY = var.API_KEY,
-          DB_HOST = var.DB_HOST,
+          DB_HOST = aws_db_instance.climate-db.endpoint,
           DB_NAME = var.DB_NAME,
           DB_PASSWORD = var.DB_PASSWORD,
           DB_PORT = var.DB_PORT,
