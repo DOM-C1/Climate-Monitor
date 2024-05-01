@@ -65,7 +65,6 @@ def check_forecasts(conn: connection, forecast: dict, location_id: int) -> int:
         WHERE f.forecast_timestamp = '{forecast["forecast_timestamp"]}'
         AND wr.loc_id = {location_id}
         """
-    print(sql_query)
     with conn.cursor() as cur:
         cur.execute(sql_query)
         forecast_id = cur.fetchone()
