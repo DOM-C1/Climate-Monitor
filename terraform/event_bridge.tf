@@ -61,3 +61,16 @@ resource "aws_scheduler_schedule" "c10-climate-step_function-terraform" {
     role_arn = aws_iam_role.eventbridge-role.arn
     }
 }
+
+resource "aws_scheduler_schedule" "c10-climate-daily-report-terraform" {
+    name = "c10-climate-daily-report-terraform"
+    flexible_time_window {
+    mode = "OFF"
+    }
+    schedule_expression = "cron(0 7 * * ? *)"
+    schedule_expression_timezone = "Europe/London"
+    target {
+    arn      = aws_sfn_state_machine.c10-climate-daily-report.arn
+    role_arn = aws_iam_role.eventbridge-role.arn
+    }
+}
