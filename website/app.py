@@ -38,14 +38,12 @@ def submit_location():
     location_value = data['location']
     name = data['name']
     email = data['email']
-    sub_newsletter = data['newsletter', 'off']
+    sub_newsletter = data['newsletter']
     sub_alerts = data['alerts']
     details = get_details_from_post_code(location_value)
     conn = get_db_connection(ENV)
-    if details['status'] == 200:
-        setup_user_location(details, name, email,
-                            sub_newsletter, sub_alerts, conn)
-        return 'User Added!'
+    setup_user_location(details, name, email,
+                        sub_newsletter, sub_alerts, conn)
 
 
 if __name__ == '__main__':
