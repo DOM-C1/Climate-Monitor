@@ -8,9 +8,9 @@ from os import environ as ENV
 
 from dotenv import load_dotenv
 
-USER_URL = "http://18.134.150.116:5000/submit-user"
+USER_URL = "http://13.40.236.104:5000/submit-user"
 HEADERS = {'Content-Type': 'application/json'}
-st.title('You can update your preferences and add a new location here.')
+st.title('Add a location.')
 
 if session_state.get('is_logged_in') == True:
     with st.form(key='user_form'):
@@ -24,7 +24,7 @@ if session_state.get('is_logged_in') == True:
         hash_password = session_state['hash_password']
         submit_button = st.form_submit_button('Submit')
         if submit_button:
-            data = {'location': location, 'email': email, 'name': name,
+            data = {'location': location, 'email': email, 'name': st.session_state['name'],
                     'newsletter': sign_newsletter, 'alerts': sign_alerts, 'password': hash_password}
             response = requests.post(
                 USER_URL, json=data, headers=HEADERS)

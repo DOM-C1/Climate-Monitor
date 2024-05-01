@@ -22,37 +22,14 @@ def login_user():
         response = jsonify({'error': 'Invalid credentials'})
         response.status_code = 400
         return response
-    return 'User confirmed'
+    _id = get_id('user_details', 'email', email, conn)
+    name = get_value_from_db('user_details', 'name', _id, 'user_id', conn)
+    response = jsonify({'message': 'Login Successful', 'name': name})
+    response.status_code = 200
+    return response
 
 
-@app.route('/submit-location', methods=['POST'])
-def submit_user():
-    """When a request is sent, the users new location is sent to the database."""
-    data = request.json
-    postcode = data['postcode']
-    email = data['email'].lower()
-    password = data['password']
-    id = get_id('user_details', 'password', password, conn)
-    if id == -1:
-        response = jsonify({'error': 'Invalid credentials'})
-        response.status_code = 400
-        return response
-    details = get_details_from_post_code(postcode)
-    conn = get_db_connection(ENV)
-    user_id = get_id('user_details', 'email', email, conn)
-
-    alert_on = get_value_from_db(
-        'user_location_assignment', 'alert_opt_in', user_id, 'user_id', conn)
-    report_on = get_value_from_db(
-        'user_location_assignment', 'report_opt_in', user_id, 'user_id', conn)
-    name = get_value_from_db(
-        'user_details', 'name', user_id, 'user_id', conn)
-    setup_user_location(details, name, email, report_on,
-                        alert_on, password, conn)
-    return 'Location added!'
-
-
-@ app.route('/submit-user', methods=['POST'])
+@app.route('/submit-user', methods=['POST'])
 def submit_location():
     """When a user signs-up, it gets sent through here and uploaded
        to the database."""
@@ -67,7 +44,9 @@ def submit_location():
     conn = get_db_connection(ENV)
     setup_user_location(details, name, email,
                         sub_newsletter, sub_alerts, password, conn)
-    return 200
+    response = jsonify({'message': 'User location added successfully'})
+    response.status_code = 200
+    return response
 
 
 if __name__ == '__main__':
