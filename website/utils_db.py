@@ -53,13 +53,14 @@ def get_loc_id(longitude: float, latitude: float, conn: connection) -> int:
     return result[0] if result else ERROR_CODE
 
 
-def setup_user_location(details, name, email, sub_newsletter, sub_alerts, conn) -> str:
+def setup_user_location(details, name, email, sub_newsletter, sub_alerts, password, conn) -> str:
     """This sets up location tracking for a user, if the user exists then it just adds a new
        location, otherwise, it sets up the new user too."""
     longitude, latitude = get_postcode_long_lat(details)
     location_name, county, country = get_location_names(longitude, latitude)
     longitude, latitude = get_standard_long_lat(location_name)
     country_id = get_id('country', 'name', country, conn)
+
     if country_id == ERROR_CODE:
         return render_template('page_not_found.html')
 
@@ -68,11 +69,13 @@ def setup_user_location(details, name, email, sub_newsletter, sub_alerts, conn) 
         county_data = {'name': county, 'country_id': country_id}
         add_to_database('county', county_data, conn)
         county_id = get_id('county', 'name', county, conn)
-    user_data = {'email': email, 'name': name}
+
+    user_data = {'email': email, 'name': name, 'password': password}
     user_id = get_id('user_details', 'email', email, conn)
     if user_id == ERROR_CODE:
         add_to_database('user_details', user_data, conn)
         user_id = get_id('user_details', 'email', email, conn)
+
     loc_id = get_loc_id(longitude, latitude, conn)
     if loc_id == ERROR_CODE:
         location_data = {'loc_name': location_name,
@@ -84,6 +87,7 @@ def setup_user_location(details, name, email, sub_newsletter, sub_alerts, conn) 
                      'report_opt_in': sub_newsletter, 'alert_opt_in': sub_alerts}
     add_to_database('user_location_assignment',
                     user_loc_data, conn)
+
     conn.close()
     return ''
 
