@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-USER_URL = "http://18.134.12.20:5000/submit-user"
+USER_URL = "http://18.134.150.116:5000/submit-user"
 HEADERS = {'Content-Type': 'application/json'}
 
 st.title('Sign-up for our newsletter')
@@ -35,7 +35,7 @@ with st.form(key='user_form'):
         if len(password) < 8:
             st.error("Please make the password at least 8 characters.")
         data = {'location': location, 'email': email, 'name': name,
-                'newsletter': sign_newsletter, 'alerts': sign_alerts, password: hash_password}
+                'newsletter': sign_newsletter, 'alerts': sign_alerts, 'password': hash_password}
         response = requests.post(
             USER_URL, json=data, headers=HEADERS)
         if response.status_code == 200:

@@ -4,9 +4,25 @@ from os import environ as ENV
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from utils import get_details_from_post_code
-from utils_db import get_db_connection, get_id, setup_user_location, get_value_from_db
+from utils_db import get_db_connection, get_id, setup_user_location, get_value_from_db, \
+    check_row_exists
 
 app = Flask(__name__)
+
+
+@app.route('/login', methods=['POST'])
+def login_user():
+    """When a request is sent, the users new location is sent to the database."""
+    load_dotenv()
+    conn = get_db_connection(ENV)
+    data = request.json
+    email = data['email'].lower()
+    password = data['password']
+    if not check_row_exists(conn, 'user_details', 'email', email, 'password', password):
+        response = jsonify({'error': 'Invalid credentials'})
+        response.status_code = 400
+        return response
+    return 'User confirmed'
 
 
 @app.route('/submit-location', methods=['POST'])
@@ -51,6 +67,7 @@ def submit_location():
     conn = get_db_connection(ENV)
     setup_user_location(details, name, email,
                         sub_newsletter, sub_alerts, password, conn)
+    return 200
 
 
 if __name__ == '__main__':
