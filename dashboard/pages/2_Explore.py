@@ -10,16 +10,43 @@ import streamlit as st
 import pydeck as pdk
 from streamlit_extras.chart_container import chart_container
 
-ICON_URL = "https://upload.wikimedia.org/wikipedia/commons/f/f7/Light_Rain_Cloud.png"
+SUN_URL = "https://commons.wikimedia.org/wiki/Category:Sun_icons#/media/File:Draw_sunny.png"
+SUN_CLOUD_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Antu_com.librehat.yahooweather.svg/2048px-Antu_com.librehat.yahooweather.svg.png"
+CLOUD_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Antu_weather-many-clouds.svg/768px-Antu_weather-many-clouds.svg.png"
+FOG_URL = "https://commons.wikimedia.org/wiki/Category:Fog_icons#/media/File:Breeze-weather-mist-48.svg.png"
+DRIZZLE_URL = "https://commons.wikimedia.org/wiki/Category:Rain_icons#/media/File:Faenza-weather-showers-scattered-symbolic.svg.png"
+RAIN_URL = "https://commons.wikimedia.org/wiki/Category:Rain_icons#/media/File:Faenza-weather-showers-symbolic.svg.png"
+FREEZE_RAIN_URL = "https://commons.wikimedia.org/wiki/Category:Rain_icons#/media/File:Antu_weather-freezing-rain.svg.png"
+SNOW_URL = "https://commons.wikimedia.org/wiki/File:Antu_weather-snow-scattered.svg#/media/File:Antu_weather-snow-scattered.svg.png"
+THUNDER_URL = "https://commons.wikimedia.org/wiki/Category:SVG_cloud_icons#/media/File:Antu_weather-storm-day.svg.png"
 
-icon_data = {
-    # Icon from Wikimedia, used the Creative Commons Attribution-Share Alike 3.0
-    # Unported, 2.5 Generic, 2.0 Generic and 1.0 Generic licenses
-    "url": ICON_URL,
-    "width": 242,
-    "height": 242,
-    "anchorY": 242,
-}
+
+def icon_data(weather_code):
+    """Get the relevant url data for a given weather code."""
+    if weather_code in range(0, 2):
+        url = SUN_URL
+    if weather_code == 2:
+        url = SUN_CLOUD_URL
+    if weather_code == 3:
+        url = CLOUD_URL
+    if weather_code in range(45, 49):
+        url = FOG_URL
+    if weather_code in range(51, 58):
+        url = DRIZZLE_URL
+    if weather_code in range(61, 66) or weather_code in range(80, 83):
+        url = RAIN_URL
+    if weather_code in range(67, 59):
+        url = FREEZE_RAIN_URL
+    if weather_code in range(71, 78) or weather_code in range(85, 87):
+        url = SNOW_URL
+    if weather_code in range(95, 100):
+        url = THUNDER_URL
+    return {
+        "url": url,
+        "width": 242,
+        "height": 242,
+        "anchorY": 242,
+    }
 
 
 @st.cache_resource
@@ -41,12 +68,27 @@ def time_rounder(timestamp: datetime, get_fifteen: bool = True) -> datetime:
     return (timestamp.replace(second=0, microsecond=0, minute=0))
 
 
-def get_location_forecast_data(_conn) -> pd.DataFrame:
-    """Returns location data as DataFrame from database."""
+def get_locations(_conn):
+    """Get a list of all locations that are associated with forecast data."""
+    with _conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(f"""SELECT L.loc_name as "Location", C.name as "County", CO.name as "Country"
+                    FROM location AS L
+                    JOIN county AS C
+                    ON (C.county_id = L.county_id)
+                    JOIN country AS CO
+                    ON (CO.country_id = C.country_id)
+                    WHERE L.loc_id IN
+                    (SELECT loc_id FROM weather_report)""")
+        locations = cur.fetchall()
+    return locations
+
+
+def get_forecast_data(_conn) -> pd.DataFrame:
+    """Get basic current weather for all locations."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""SET timezone='Europe/London'""")
-        cur.execute(f"""SELECT l.latitude, l.longitude, l.loc_name as "Location", c.name as "County", co.name as "Country",
-                    f.forecast_timestamp as "Forecast time", wc.description as "Weather"
+        cur.execute(f"""SELECT l.latitude, l.longitude, l.loc_name as "Location", C.name as "County", CO.name as "Country",wc.description as "Weather",
+                    f.weather_code_id AS "Weather code"
                     FROM location AS l
                     JOIN county as c
                     ON (l.county_id=c.county_id)
@@ -58,18 +100,50 @@ def get_location_forecast_data(_conn) -> pd.DataFrame:
                     ON (f.weather_report_id=w.weather_report_id)
                     JOIN weather_code as wc
                     ON (f.weather_code_id=wc.weather_code_id)
-                    GROUP BY "Forecast time", l.loc_id, "County", "Country", "Weather"
+                    WHERE f.forecast_timestamp < NOW()
+                    AND f.forecast_timestamp > NOW() - interval '15 minutes'
+                    GROUP BY l.latitude, l.longitude, "Location", "County", "Country", "Weather", f.forecast_timestamp, f.weather_code_id
+                    ORDER BY f.forecast_timestamp DESC
                     """)
 
         rows = cur.fetchall()
-        print('LOCATIONS')
-        print(rows)
-        data_f = pd.DataFrame.from_dict(rows)
-    data_f["icon_data"] = None
+        data_f = pd.DataFrame.from_dict(rows).drop_duplicates()
+    data_f["icon_data"] = data_f["Weather code"].apply(icon_data)
+    return [d for _, d in data_f.groupby(['Weather code'])]
 
-    for i in data_f.index:
-        data_f["icon_data"][i] = icon_data
 
+def get_location_data(_conn, location, location_type) -> pd.DataFrame:
+    """Get basic current weather for all locations."""
+    if location_type == "Country":
+        where = f"CO.name = '{location}'"
+    elif location_type == "County":
+        where = f"C.name = '{location}'"
+    elif location_type == "Location":
+        where = f"L.loc_name = '{location}'"
+    with _conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute("""SET timezone='Europe/London'""")
+        cur.execute(f"""SELECT l.latitude, l.longitude, wc.description as "Weather",
+                    f.weather_code_id AS "Weather code"
+                    FROM location AS l
+                    JOIN county as c
+                    ON (l.county_id=c.county_id)
+                    JOIN country as co
+                    ON (c.country_id=co.country_id)
+                    JOIN weather_report as w
+                    ON (l.loc_id=w.loc_id)
+                    JOIN forecast as f
+                    ON (f.weather_report_id=w.weather_report_id)
+                    JOIN weather_code as wc
+                    ON (f.weather_code_id=wc.weather_code_id)
+                    WHERE f.forecast_timestamp < NOW()
+                    AND f.forecast_timestamp > NOW() - interval '15 minutes'
+                    AND {where}
+                    GROUP BY l.latitude, l.longitude, "Weather", f.forecast_timestamp, f.weather_code_id
+                    ORDER BY f.forecast_timestamp DESC
+                    """)
+
+        rows = cur.fetchall()
+        data_f = pd.DataFrame.from_dict(rows).drop_duplicates()
     return data_f
 
 
@@ -103,48 +177,36 @@ def get_locations_with_alerts(_conn):
 def get_map(loc_data, lat, lon, location_type):
     if location_type == 'Location':
         zoom = 11
-        radius = 200
+        get_size = 30
     elif location_type == 'County':
         zoom = 10
-        radius = 500
+        get_size = 35
     elif location_type == 'Country':
         zoom = 6.5
-        radius = 3000
+        get_size = 30
     elif location_type == 'UK':
         zoom = 5.2
-        radius = 3000
+        get_size = 30
     st.pydeck_chart(pdk.Deck(
-        map_style=None,
+        map_style='dark',
         initial_view_state=pdk.ViewState(
             latitude=lat,
             longitude=lon,
             zoom=zoom,
-            pitch=50,
+            pitch=30,
         ),
         layers=[
             pdk.Layer(
-                'HexagonLayer',
-                data=loc_data,
-                get_position="[latitude, longitude]",
-                radius=200,
-                elevation_scale=4,
-                elevation_range=[0, 1000],
-                pickable=True,
-                extruded=True,
-            ),
-            pdk.Layer(
                 'IconLayer',
-                data=loc_data,
+                data=df,
                 get_icon="icon_data",
                 opacity=500,
-                get_size=1,
-                size_scale=15,
+                get_size=get_size,
+                size_scale=1,
                 get_position="[longitude, latitude]",
-                get_color='[200, 30, 0, 160]',
                 get_text="location",
-                get_radius=radius,
                 pickable=True
-            ),
+            ) for df in loc_data
         ],
         tooltip={'html': '<b>Weather:</b> {Weather}\
                  <b>Location:</b> {Location}',
@@ -155,27 +217,28 @@ if __name__ == "__main__":
     load_dotenv()
     st.title('Explore')
     conn = connect_to_db(dict(ENV))
-    forecast_d = get_location_forecast_data(conn)
+    forecast_d = get_forecast_data(conn)
     with st.sidebar:
         by_loc = st.checkbox("Search by location")
         if by_loc:
             loc_type = st.selectbox('Search by:',
                                     ['Location', 'County', 'Country'])
+            locations = get_locations(conn)
+
             if loc_type == 'Location':
                 location = st.selectbox('Locations',
-                                        forecast_d['Location'].sort_values().unique())
+                                        {l['Location'] for l in locations})
             elif loc_type == 'County':
                 location = st.selectbox('Counties',
-                                        forecast_d['County'].sort_values().unique())
+                                        {l['County'] for l in locations})
             elif loc_type == 'Country':
                 location = st.selectbox('Locations',
-                                        forecast_d['Country'].sort_values().unique())
+                                        {l['Country'] for l in locations})
 
     if by_loc:
-        lat, lon, county = forecast_d[forecast_d[loc_type] == location][[
-            'latitude', 'longitude', 'County']].values[0]
-        forecast_d = forecast_d[forecast_d['Forecast time']
-                                == time_rounder(datetime.now())]
+        forecast_loc = get_location_data(conn, location, loc_type)
+        lat, lon = forecast_loc[['latitude', 'longitude']].values[0]
+        print(lat, lon)
         w_map = get_map(forecast_d, lat, lon, loc_type)
     else:
         alerts = get_locations_with_alerts(conn)
@@ -187,12 +250,16 @@ if __name__ == "__main__":
                 icon = "⚠️"
             elif alert["Severity"] == "Severe Warning":
                 icon = "🚨"
+            if alert["Alert type"] == "Air Quality":
+                key_words = 'had an'
+            else:
+                key_words = 'has a'
             if alert["min_time"] != alert["max_time"]:
                 st.warning(
-                    f'**{alert["Location"]}** has a **{alert["Alert type"]} {alert["Severity"]}** from **{alert["min_time"]}** to **{alert["max_time"]}**.', icon=icon)
+                    f'**{alert["Location"]}** {key_words} **{alert["Alert type"]} {alert["Severity"]}** from **{alert["min_time"]}** to **{alert["max_time"]}**.', icon=icon)
             else:
                 st.warning(
-                    f'**{alert["Location"]}** has a **{alert["Alert type"]} {alert["Severity"]}** at **{alert["min_time"]}**.', icon=icon)
+                    f'**{alert["Location"]}** {key_words} **{alert["Alert type"]} {alert["Severity"]}** at **{alert["min_time"]}**.', icon=icon)
         w_map = get_map(forecast_d, 52.536, -2.5341, 'UK')
         with chart_container(forecast_d):
 
