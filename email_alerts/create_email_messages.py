@@ -131,7 +131,7 @@ def create_full_html_per_user(users_weather: list[list], tables: list[str]) -> s
     </head><body style='font-family: sans-serif; background-color: white; 
     border: 2px solid black;width: 35rem; justify-content: center;
     align-items: center;'>
-    <h1 style='background-color: #009879; width: 32.73rem; padding: 1rem; 
+    <h1 style='background-color: #82a6f4; width: 32.73rem; padding: 1rem; 
     border: 2px solid black; color: white; text-align: center;'>!-!-!-!-!-Weather Alerts-!-!-!-!-!</h1>"""
     weather_alerts_data = create_html_table_weather(users_weather, tables[0])
     air_quality_data = create_html_air_quality(users_weather, tables[1])
