@@ -67,36 +67,6 @@ def get_location_names(latitude: float, longitude: float) -> tuple[str]:
     return location, county, country
 
 
-def insert_location(conn: connection, latitude: float,
-                    longitude: float, location: str,
-                    county: str, country: str) -> int:
-    """Insert a location into the database, and it's associated county 
-    and country where they don't already exist."""
-    if country:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                f"""SELECT country_id FROM country WHERE name = '{country}'""")
-            country_id = cur.fetchone()['country_id']
-            cur.execute(f"""SELECT county_id FROM county
-                            WHERE name = '{county}'
-                            AND country_id = {country_id}""")
-            county_id = cur.fetchone()
-            if not county_id:
-                cur.execute(f"""INSERT INTO county (name, country_id)
-                                VALUES ('{county}', {country_id})
-                                RETURNING county_id""")
-                conn.commit()
-                county_id = cur.fetchone()
-            county_id = county_id['county_id']
-            cur.execute(f"""INSERT INTO location (latitude, longitude, loc_name, county_id)
-                            VALUES ({latitude}, {longitude}, '{location}', {county_id})
-                            RETURNING loc_id""")
-            conn.commit()
-            loc_id = cur.fetchone()
-        return loc_id
-    return 0
-
-
 def get_location_id(conn: connection, latitude: float, longitude: float) -> int:
     """Obtain the location id from the database."""
 
@@ -105,9 +75,6 @@ def get_location_id(conn: connection, latitude: float, longitude: float) -> int:
         cur.execute(f"""SELECT loc_id FROM location
                     WHERE loc_name = '{location}'""")
         loc_id = cur.fetchone()
-    if not loc_id:
-        loc_id = insert_location(
-            conn, latitude, longitude, location, county, country)
     if loc_id:
         return loc_id["loc_id"]
     return 0
