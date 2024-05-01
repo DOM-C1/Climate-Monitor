@@ -24,7 +24,8 @@ def pipeline(conn: connection, config: dict, latitude: float, longitude: float) 
     weather_report_id = insert_weather_report(conn, loc_id)
 
     for w in weather:
-        forecast_id = insert_forecast(conn, w["forecast"], weather_report_id)
+        forecast_id = insert_forecast(
+            conn, w["forecast"], weather_report_id, loc_id)
         if w["warnings"]:
             for warning in w["warnings"]:
                 insert_weather_alert(conn, warning, forecast_id)
