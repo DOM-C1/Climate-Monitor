@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 import streamlit as st
 from vega_datasets import data
 import pydeck as pdk
-import streamlit.components.v1 as components
 
 
 @st.cache_resource
@@ -36,7 +35,10 @@ def get_location_forecast_data(_conn) -> pd.DataFrame:
     """Returns location data as DataFrame from database."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(f"""SELECT l.latitude, l.longitude, l.loc_name as "Location", c.name as "County", co.name as "Country",
-                    f.forecast_timestamp as "Forecast time", wc.description as "Weather"
+                    f.forecast_timestamp as "Forecast time", wc.description as "Weather", f.temperature as "Temperature",
+                    f.apparent_temp as "Feels like", f.precipitation_prob as "Precipitation probability", f.rainfall as "Rainfall",
+                    f.precipitation as "Precipitation", f.snowfall as "Snowfall", f.visibility as "Visibility", 
+                    f.lightning_potential as "Lightning potential", f.wind_speed as "Wind speed", f.cloud_cover as "Cloud cover"
                     FROM location AS l
                     JOIN county as c
                     ON (l.county_id=c.county_id)
@@ -47,11 +49,40 @@ def get_location_forecast_data(_conn) -> pd.DataFrame:
                     JOIN forecast as f
                     ON (f.weather_report_id=w.weather_report_id)
                     JOIN weather_code as wc
-                    ON (f.weather_code_id=wc.weather_code_id)
-                    WHERE F.forecast_timestamp < NOW() + interval '12 hours'
+                    ON (F.weather_code_id=wc.weather_code_id)
+                    WHERE F.forecast_timestamp < NOW() + interval '8 hours'
                     AND F.forecast_timestamp > NOW() - interval '15 minutes'
-                    GROUP BY "Forecast time", l.loc_id, "County", "Country", "Weather"
+                    GROUP BY "Forecast time", l.loc_id, "County", "Country", "Weather", "Temperature", "Feels like","Precipitation",
+                    "Precipitation probability", "Rainfall", "Snowfall", "Visibility", "Lightning potential", "Wind speed", "Cloud cover"
                     ORDER BY f.forecast_timestamp
+                    """)
+
+        rows = cur.fetchall()
+        data_f = pd.DataFrame.from_dict(rows)
+
+    return data_f
+
+
+def get_air_quality(_conn, location) -> pd.DataFrame:
+    """Extract analytics about current weather for a specific location"""
+    with _conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(f"""SELECT aq.o3_concentration AS "O3 concentration", aq.severity_level_id AS "Severity level", 
+                    wr.report_time AS "Report time", sl.severity_level AS "Severity"
+                    FROM
+                    air_quality AS aq
+                    JOIN
+                    weather_report AS wr
+                    ON
+                    (aq.weather_report_id = wr.weather_report_id)
+                    JOIN
+                    severity_level as sl
+                    ON
+                    (sl.severity_level_id = aq.severity_level_id)
+                    JOIN
+                    location AS l
+                    ON
+                    (l.loc_id = wr.loc_id)
+                    WHERE l.loc_name = '{location}'
                     """)
 
         rows = cur.fetchall()
@@ -125,7 +156,7 @@ def uk_map(loc_data, lon=-2, lat=54, tooltips=[]):
 
 def get_map(loc_data, lon, lat):
     st.pydeck_chart(pdk.Deck(
-        map_style=None,
+        map_style='dark',
         initial_view_state=pdk.ViewState(
             latitude=lat,
             longitude=lon,
@@ -227,22 +258,77 @@ def compass(wind_direction):
     return compass
 
 
+def sort_data_by_hour(data):
+    data["Temperature"] = data[
+        "Temperature"].resample('h').mean().round(1)
+    data["Feels like"] = data[
+        "Feels like"].resample('h').mean().round(1)
+    data["Precipitation probability"] = data[
+        "Temperature"].resample('h').mean().round()
+    data["Cloud cover"] = data[
+        "Temperature"].resample('h').mean().round()
+    data["Rainfall"] = data[
+        "Rainfall"].resample('h').sum().round(2)
+    data["Snowfall"] = data[
+        "Snowfall"].resample('h').sum()
+    data["Lightning potential"] = data[
+        "Lightning potential"].resample('h').mean().round(1)
+    data = data.dropna(how="any")  # drop nans
+    data = data.loc[:, (data != 0).any(axis=0)]  # drop columns with zeros
+    data = data.reset_index(level=['Forecast time']).drop_duplicates()
+    return data
+
+
+def format_data_types(data):
+    data['Forecast time'] = data['Forecast time'].dt.strftime(
+        '%H:%M')
+    data["Temperature"] = data["Temperature"].apply(
+        lambda x: str(x) + '°C')
+    data["Feels like"] = data["Feels like"].apply(
+        lambda x: str(x) + '°C')
+    if "Precipitation probability" in data.columns:
+        data["Precipitation probability"] = data["Precipitation probability"].apply(
+            lambda x: str(x) + '%')
+    if "Lightning potential" in data.columns:
+        data["Lightning potential"] = data["Lightning potential"].apply(
+            lambda x: str(x) + 'J/kg')
+    if "Cloud cover" in data.columns:
+        data["Cloud cover"] = data["Cloud cover"].apply(
+            lambda x: str(x) + '%')
+    if "Rainfall" in data.columns:
+        data["Rainfall"] = data["Rainfall"].apply(
+            lambda x: str(x) + 'mm')
+    return data
+
+
+def style_table(cell):
+    if '%' in cell:
+        cell = float(cell[:-1])
+        if cell <= 30:
+            return "background-color: green"
+        if 30 < cell < 70:
+            return "background-color: yellow"
+        return "background-color: red"
+    if '°C' in cell:
+        cell = float(cell[:-2])
+        if cell <= 10:
+            return "background-color: blue"
+        if 10 < cell < 20:
+            return "background-color: green"
+        return "background-color: red"
+
+
 if __name__ == "__main__":
     load_dotenv()
+    st.set_page_config(layout="wide")
     st.title('Quick Search')
     conn = connect_to_db(dict(ENV))
     forecast_d = get_location_forecast_data(conn)
     location = st.selectbox('Locations',
                             ['Select a location...'] + list(forecast_d['Location'].sort_values().unique()))
-    if location != 'Select a location...':
-        lat, lon = forecast_d[forecast_d['Location'] ==
-                              location][['latitude', 'longitude']].values[0]
-        forecast_d_loc = forecast_d[forecast_d['Location'] == location]
-        lat, lon = forecast_d_loc[['latitude', 'longitude']].values[0]
 
+    if location != 'Select a location...':
         st.markdown("# Current weather")
-        current_weather = forecast_d_loc[forecast_d_loc["Forecast time"] == time_rounder(
-            datetime.now())]
         current_weather = get_current_weather(conn, location)
 
         col1, col2, col3 = st.columns([1, 1, 1])
@@ -258,7 +344,7 @@ if __name__ == "__main__":
         with col1:
             st.metric("Cloud cover",
                       f"{current_weather['cloud_cover'].values[0]}%")
-            st.metric("Chance of rain",
+            st.metric("Precipitation probability",
                       f"{current_weather['precipitation_prob'].values[0]}%")
             st.metric("Wind speed",
                       f"{current_weather['wind_speed'].values[0]} km/h")
@@ -273,19 +359,153 @@ if __name__ == "__main__":
             st.markdown("# ")
 
         st.markdown("#")
-
-        # st.altair_chart(alt.Chart(current_weather).mark_bar().encode(
-        #     x = "Weather",
-        #     y = "temperature"
-
-        # ) + alt.Chart(current_weather).mark_point().encode(
-        #     x = 'humidity',
-        #     y = 'precipitation',
-        #     color = "temperature"))
-
         st.markdown("## Today's forecast")
-        st.write("average temp, modal weather code, etc.")
-        st.table(forecast_d_loc)
+        forecast_d_loc = forecast_d[forecast_d['Location'] == location]
+        lat, lon = forecast_d_loc[['latitude', 'longitude']].values[0]
+
+        forecast_hourly = forecast_d_loc[[
+            "Forecast time", "Weather", "Temperature", "Feels like",
+            "Precipitation probability", "Rainfall", "Snowfall", "Lightning potential", "Cloud cover"]].copy().set_index("Forecast time")
+        forecast_hourly = sort_data_by_hour(forecast_hourly)
+        forecast_hourly = format_data_types(forecast_hourly)
+
+        main_cols = [
+            {'selector': 'th', 'props': 'background-color: #000042; color:  #ffffff'}]
+        sub_cols = [{'selector': 'th', 'props': 'background-color: grey'}]
+        st.markdown(forecast_hourly.T.style.hide(axis="columns").map(lambda x: "background-color:#000042;color:#ffffff" if isinstance(x, str) and ':' in x else "background-color:#82a6f4").set_table_styles(main_cols, axis=1).to_html(),
+                    unsafe_allow_html=True)
+        st.markdown('#')
+        line_graph = alt.Chart(forecast_d_loc).mark_line().encode(
+            x="Forecast time",
+            y="Temperature",
+            color="Cloud cover"
+        )
+
+        graph_type = st.selectbox('Variable', [
+                                  "Temperature", "Visibility", "Air quality", "Precipitation", "Snowfall", "Lightning", "Cloud cover"])
+        if graph_type == "Precipitation":
+            """rainfall, prec, prec prob"""
+            prec_col, rain_col = st.columns(2)
+            with prec_col:
+
+                precipitation_graph = alt.Chart(forecast_d_loc).mark_area(color="navyblue").encode(
+                    x=alt.X('Forecast time:T', axis=alt.Axis(
+                        grid=True)).scale(zero=False).title('Time'),
+                    y=alt.Y("Precipitation:Q", axis=alt.Axis(grid=True)).scale(
+                        zero=False).title("Precipitation (mm)")
+                )
+                precipitation_prob_graph = alt.Chart(forecast_d_loc).mark_line(color="gold").encode(
+                    x=alt.X('Forecast time:T').scale(zero=False).title('Time'),
+                    y=alt.Y("Precipitation probability:Q", axis=alt.Axis(grid=True)).scale(
+                        zero=False).title("Precipitation probability (%)")
+                )
+                prec_graph = alt.layer(
+                    precipitation_graph, precipitation_prob_graph).resolve_scale(y="independent")
+                st.altair_chart(prec_graph.configure_axisLeft(
+                    labelColor='black',
+                    titleColor='black'
+                ).configure_axisRight(
+                    labelColor='black',
+                    titleColor='black'
+                ).configure_axisBottom(
+                    labelColor='black',
+                    titleColor='black'
+                ), use_container_width=True)
+            with rain_col:
+                rainfall_graph = alt.Chart(forecast_d_loc).mark_area(color="blue").encode(
+                    x=alt.X('Forecast time:T', axis=alt.Axis(
+                        grid=True)).scale(zero=False).title('Time'),
+                    y=alt.Y("Rainfall:Q", axis=alt.Axis(grid=True)).scale(
+                        zero=False).title("Rainfall (mm)")
+                )
+                st.altair_chart(rainfall_graph.configure_axisLeft(
+                    labelColor='black',
+                    titleColor='black'
+                ).configure_axisBottom(
+                    labelColor='black',
+                    titleColor='black'
+                ), use_container_width=True)
+        else:
+            if graph_type == "Air quality":
+                air_quality = get_air_quality(conn, location)
+                air_quality["Report time"] = air_quality["Report time"].apply(
+                    time_rounder)
+                air_quality["level1"] = air_quality["Report time"].apply(
+                    lambda x: 160)
+                air_quality["level2"] = air_quality["Report time"].apply(
+                    lambda x: 140)
+                air_quality["level3"] = air_quality["Report time"].apply(
+                    lambda x: 100)
+                air_base = alt.Chart(air_quality).encode(
+                    x=alt.X("Report time:T", axis=alt.Axis(grid=True)))
+                aq_chart = air_base.mark_line(color="black").encode(
+                    y=alt.Y("O3 concentration", axis=alt.Axis(
+                        grid=True)).scale(zero=False),
+                    tooltip=["Report time", "O3 concentration"]
+                )
+                aq_chart1 = air_base.mark_line(color="red").encode(
+                    y=alt.Y("level1").title("03 concentration")
+                )
+                aq_chart2 = air_base.mark_line(color="gold").encode(
+                    y=alt.Y("level2").title("03 concentration")
+                )
+                aq_chart3 = air_base.mark_line(color="green").encode(
+                    y=alt.Y("level3").title("03 concentration")
+                )
+                weather_today_graph = alt.layer(aq_chart + aq_chart1 + aq_chart2 +
+                                                aq_chart3)
+            elif graph_type == "Temperature":
+                weather_today_graph = alt.Chart(forecast_d_loc).mark_line().transform_fold(
+                    fold=['Temperature', 'Feels like'],
+                    as_=['variable', 'value']
+                ).encode(
+                    x=alt.X('Forecast time:T', axis=alt.Axis(
+                        grid=True)).scale(zero=False).title('Time'),
+                    y=alt.Y('max(value):Q', axis=alt.Axis(grid=True)).scale(
+                        zero=False).title('Temperature (°C)'),
+                    color=alt.Color('variable:N').title("Temperature type")
+                ).configure_range(
+                    category={'scheme': 'category10'}
+                )
+            elif graph_type == "Cloud cover":
+                weather_today_graph = alt.Chart(forecast_d_loc).mark_line(color="blue").encode(
+                    x=alt.X('Forecast time:T', axis=alt.Axis(
+                        grid=True)).scale(zero=False).title('Time'),
+                    y=alt.Y("Cloud cover:Q", axis=alt.Axis(grid=True)).scale(
+                        zero=False).title("Cloud cover (%)")
+                )
+            elif graph_type == "Snowfall":
+                weather_today_graph = alt.Chart(forecast_d_loc).mark_line(color="red").encode(
+                    x=alt.X('Forecast time:T', axis=alt.Axis(
+                        grid=True)).scale(zero=False).title('Time'),
+                    y=alt.Y("Snowfall:Q", axis=alt.Axis(grid=True)).scale(
+                        zero=False).title("Snowfall (cm)")
+                )
+            elif graph_type == "Lightning":
+                weather_today_graph = alt.Chart(forecast_d_loc).mark_line(color="gold").encode(
+                    x=alt.X('Forecast time:T', axis=alt.Axis(
+                        grid=True)).scale(zero=False).title('Time'),
+                    y=alt.Y("Lightning potential", axis=alt.Axis(grid=True)).scale(
+                        zero=False).title(f"Lightning potential (J/kg)")
+                )
+            elif graph_type == "Visibility":
+                weather_today_graph = alt.Chart(forecast_d_loc).mark_line(color="green").encode(
+                    x=alt.X('Forecast time:T', axis=alt.Axis(
+                        grid=True)).scale(zero=False).title('Time'),
+                    y=alt.Y("Visibility", axis=alt.Axis(grid=True)).scale(
+                        zero=False).title(f"Visibility (m)")
+                )
+
+            st.altair_chart(weather_today_graph.configure_legend(
+                labelColor='black',
+                titleColor='black'
+            ).configure_axisLeft(
+                labelColor='black',
+                titleColor='black'
+            ).configure_axisBottom(
+                labelColor='black',
+                titleColor='black'
+            ), use_container_width=True)
         st.markdown("## This week's forecast")
         st.write(forecast_d_loc)
         get_map(forecast_d, lon, lat)

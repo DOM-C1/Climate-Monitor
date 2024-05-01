@@ -53,7 +53,7 @@ def get_country(address: dict) -> str:
 
 def get_location_names(latitude: float, longitude: float) -> tuple[str]:
     """Extract the location names from a longitude and latitude."""
-    geolocator = Nominatim(user_agent="my_application")
+    geolocator = Nominatim(user_agent="my_application", timeout=10)
     location_obj = geolocator.reverse(
         f"{latitude}, {longitude}")
     address = location_obj.raw['address']
@@ -134,3 +134,4 @@ def insert_all_floods(config: dict, floods: list[dict]) -> None:
     with get_db_connection(config) as conn:
         for flood in floods:
             insert_flood(conn, flood)
+    conn.close()

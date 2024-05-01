@@ -4,8 +4,6 @@ from itertools import zip_longest
 
 import pandas as pd
 
-from extract import get_air_quality, get_weather_details_for_24hrs, get_weather_details_for_week
-
 
 def rename_columns(data: pd.DataFrame) -> pd.DataFrame:
     """Rename the dataframe columns to match database."""
@@ -110,14 +108,12 @@ def calculate_visibility_alerts(visibility: pd.Series) -> int:
 def calculate_air_quality_alert(concentration: float) -> int:
     """Find if air quality is an alert from the concentration of o3."""
     if 0 <= concentration < 101:
-        severity_id = 4
-    elif 101 <= concentration < 161:
-        severity_id = 3
-    elif 161 <= concentration < 241:
-        severity_id = 2
-    elif 241 <= concentration:
-        severity_id = 1
-    return severity_id
+        return 4
+    if 101 <= concentration < 161:
+        return 3
+    if 161 <= concentration < 241:
+        return 2
+    return 1
 
 
 def calculate_uv_alerts(uv_index: float) -> int:
@@ -181,18 +177,15 @@ def gather_data_from_json(json_data: dict, key: str) -> list[dict]:
                 in zip_longest(forecasts, forecast_warnings))
 
 
-def gather_weather_data(latitude: float, longitude: float) -> list[dict]:
+def gather_weather_data(minutely_data: dict, hourly_data: dict) -> list[dict]:
     """Obtain transformed forecast data for the whole weather report."""
-    minutely_data = get_weather_details_for_24hrs(latitude, longitude)
-    hourly_data = get_weather_details_for_week(latitude, longitude)
     return gather_data_from_json(minutely_data, 'minutely_15') +\
         gather_data_from_json(hourly_data, 'hourly')
 
 
-def gather_air_quality(latitude: float, longitude: float, config: dict) -> dict:
+def gather_air_quality(air_quality_data: dict) -> dict:
     """Obtain the o3 air quality for the weather report."""
-    concentration = get_air_quality(latitude, longitude, config)[
-        'O3']['concentration']
+    concentration = air_quality_data['O3']['concentration']
     try:
         concentration = float(concentration)
     except ValueError:

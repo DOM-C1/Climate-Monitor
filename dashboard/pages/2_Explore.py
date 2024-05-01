@@ -8,6 +8,7 @@ from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 import streamlit as st
 import pydeck as pdk
+from streamlit_extras.chart_container import chart_container
 
 ICON_URL = "https://upload.wikimedia.org/wikipedia/commons/f/f7/Light_Rain_Cloud.png"
 
@@ -196,3 +197,11 @@ if __name__ == "__main__":
                 st.warning(
                     f'**{alert["Location"]}** has a **{alert["Alert type"]} {alert["Severity"]}** at **{alert["min_time"]}**.', icon=icon)
         w_map = get_map(forecast_d, 52.536, -2.5341, 'UK')
+        with chart_container(forecast_d):
+
+            st.write("Here's a cool chart")
+            forecast_d["Forecast time"] = pd.to_datetime(
+                forecast_d['Forecast time'])
+            graph_hourly = forecast_d.sort_values(by='Forecast time')
+            st.area_chart(
+                graph_hourly[["Temperature", "Feels like"]])

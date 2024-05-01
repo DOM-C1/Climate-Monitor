@@ -24,6 +24,7 @@ def submit_user():
     postcode = request.form['postcode']
     details = get_details_from_post_code(postcode)
     conn = get_db_connection(ENV)
+    print(type(conn))
     user_id = get_id('user_details', 'email', email, conn)
     if user_id == -1:
         return render_template('user_not_found.html')
@@ -61,8 +62,8 @@ def submit_location():
         setup_user_location(details, name, email,
                             sub_newsletter, sub_alerts, conn)
         return 'User Added!'
-    else:
-        return render_template('cant_be_found_page.html')
+
+    return render_template('cant_be_found_page.html')
 
 
 if __name__ == '__main__':
