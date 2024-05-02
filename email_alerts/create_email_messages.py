@@ -65,7 +65,7 @@ def create_html_table_weather(user_alerts: list[list[str]], weather_alert: str) 
         alert_msg = get_alert_msg(
             alert[SEV_LEVEL_POS], alert[ALERT_TYPE_NAME_POS])
         output += f"""<tr>
-        <td style='border: 1px solid  black;text-align: left;padding: 8px;
+        <td style='border: 2px solid  black;text-align: center;padding: 8px;
         background-color: {get_alert_visual(alert[SEV_LEVEL_POS])}; font-size: 30px;'>!</td>
         <td style={table_style}>{alert_msg} {alert[-1]}</td>
         <td style={table_style}>{alert[LOC_NAME_POS]}</td>
