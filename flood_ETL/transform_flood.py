@@ -30,7 +30,7 @@ def clean_data(data: pd.DataFrame) -> pd.DataFrame:
     data['timeMessageChanged'] = data['timeMessageChanged'].apply(
         pd.to_datetime)
     data = data[data['timeMessageChanged'] >
-                datetime.now() - timedelta(hours=10)]
+                datetime.now() - timedelta(hours=1)]
     data.loc[:, 'floodArea'] = data.loc[:, 'floodArea'].apply(
         lambda x: x['county'].split(', '))
     data = data.explode('floodArea')
