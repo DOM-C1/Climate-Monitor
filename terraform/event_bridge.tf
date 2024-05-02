@@ -70,7 +70,7 @@ resource "aws_scheduler_schedule" "c10-climate-daily-report-terraform" {
     schedule_expression = "cron(0 7 * * ? *)"
     schedule_expression_timezone = "Europe/London"
     target {
-    arn      = aws_sfn_state_machine.c10-climate-daily-report.arn
+    arn      = aws_lambda_function.c10-climate-daily-report.arn
     role_arn = aws_iam_role.eventbridge-role.arn
     }
 }
