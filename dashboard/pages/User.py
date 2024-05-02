@@ -86,27 +86,34 @@ if not st.session_state.get('is_logged_in'):
 else:
     st.title('Track your locations and change preferences')
 if st.session_state.get('is_logged_in'):
-    if st.button('Reload Page'):
-        st.experimental_rerun()
-    if st.session_state.get('is_logged_in') == True:
-        data = {'email': st.session_state['email'],
-                'password': st.session_state['hash_password']}
-        response = requests.post(DETAILS_URL, headers=HEADERS, json=data)
-        df = response.json()['df']
-        df = pd.read_json(df, orient='records')
-        for location in df['loc_name'].unique().tolist():
-            alert = df[df['loc_name'] ==
-                       location]['report_opt_in'].unique()[0]
-            report = alert = df[df['loc_name'] ==
-                                location]['report_opt_in'].unique()[0]
-            cols = st.columns(3)
+    with st.sidebar:
+        for _ in range(10):
+            st.sidebar.markdown(" ")
+        st.button("Log-out")
+        if st.button:
+            st.session_state['is_logged_in'] = False
 
-            cols[0].write(location)
-            alerts = cols[1].checkbox(
-                'Sign-up for alerts', key=f"alerts_{location}", value=bool(alert))
-            reports = cols[2].checkbox(
-                'Sign-up for reports', key=f"reports_{location}", value=bool(report))
-            print(reports)
+    if st.button('Submit'):
+        st.experimental_rerun()
+
+    data = {'email': st.session_state['email'],
+            'password': st.session_state['hash_password']}
+    response = requests.post(DETAILS_URL, headers=HEADERS, json=data)
+    df = response.json()['df']
+    df = pd.read_json(df, orient='records')
+    for location in df['loc_name'].unique().tolist():
+        alert = df[df['loc_name'] ==
+                   location]['report_opt_in'].unique()[0]
+        report = alert = df[df['loc_name'] ==
+                            location]['report_opt_in'].unique()[0]
+        cols = st.columns(3)
+
+        cols[0].write(location)
+        alerts = cols[1].checkbox(
+            'Sign-up for alerts', key=f"alerts_{location}", value=bool(alert))
+        reports = cols[2].checkbox(
+            'Sign-up for reports', key=f"reports_{location}", value=bool(report))
+        print(reports)
     st.title('Add a location.')
 
     with st.form(key='user_form'):
