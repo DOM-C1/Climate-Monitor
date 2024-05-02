@@ -285,8 +285,7 @@ def get_forecast_data(_conn) -> pd.DataFrame:
                     ON (f.weather_report_id=w.weather_report_id)
                     JOIN weather_code as wc
                     ON (f.weather_code_id=wc.weather_code_id)
-                    WHERE f.forecast_timestamp < NOW()
-                    AND f.forecast_timestamp > NOW() - interval '15 minutes'
+                    WHERE F.forecast_timestamp = '{time_rounder(datetime.now())}'
                     GROUP BY l.latitude, l.longitude, "Location", "Weather", f.forecast_timestamp, f.weather_code_id
                     ORDER BY f.forecast_timestamp DESC
                     """)

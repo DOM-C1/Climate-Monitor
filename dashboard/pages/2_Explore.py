@@ -99,8 +99,7 @@ def get_forecast_data(_conn) -> pd.DataFrame:
                     ON (f.weather_report_id=w.weather_report_id)
                     JOIN weather_code as wc
                     ON (f.weather_code_id=wc.weather_code_id)
-                    WHERE f.forecast_timestamp < NOW()
-                    AND f.forecast_timestamp > NOW() - interval '15 minutes'
+                    WHERE F.forecast_timestamp = '{time_rounder(datetime.now())}'
                     GROUP BY l.latitude, l.longitude, "Location", "County", "Country", "Weather", f.forecast_timestamp, f.weather_code_id
                     ORDER BY f.forecast_timestamp DESC
                     """)
@@ -241,53 +240,30 @@ if __name__ == "__main__":
     st.title('Explore')
     conn = connect_to_db(dict(ENV))
     forecast_d = get_forecast_data(conn)
-    with st.sidebar:
-        by_loc = st.checkbox("Search by location")
-        if by_loc:
-            loc_type = st.selectbox('Search by:',
-                                    ['Location', 'County', 'Country'])
-            locations = get_locations(conn)
+    st.markdown('## Map')
+    w_map = get_map(forecast_d, 54.536, -2.5341, 'UK')
+    st.markdown('## Metrics')
+    st.markdown("""
+                    <style>
+                    [data-testid="stMetricValue"] {
+                        font-size: 20px;
+                    }
+                    </style>
+                    """,
+                unsafe_allow_html=True,
+                )
 
-            if loc_type == 'Location':
-                location = st.selectbox('Locations',
-                                        {l['Location'] for l in locations})
-            elif loc_type == 'County':
-                location = st.selectbox('Counties',
-                                        {l['County'] for l in locations})
-            elif loc_type == 'Country':
-                location = st.selectbox('Locations',
-                                        {l['Country'] for l in locations})
-
-    if by_loc:
-        forecast_loc = get_location_data(conn, location, loc_type)
-        lat, lon = forecast_loc[['latitude', 'longitude']].values[0]
-        print(lat, lon)
-        w_map = get_map(forecast_d, lat, lon, loc_type)
-    else:
-        st.markdown('## Map')
-        w_map = get_map(forecast_d, 54.536, -2.5341, 'UK')
-        st.markdown('## Metrics')
-        st.markdown("""
-                        <style>
-                        [data-testid="stMetricValue"] {
-                            font-size: 20px;
-                        }
-                        </style>
-                        """,
-                    unsafe_allow_html=True,
-                    )
-
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            get_global_metric(conn, 'temperature',
-                              'Highest', 'temperature', '°C')
-            get_global_metric(conn, 'cloud_cover', 'Least', 'cloud cover', '%')
-        with col2:
-            get_global_metric(conn, 'temperature',
-                              'Lowest', 'temperature', '°C')
-            get_global_metric(conn, 'humidity', 'Most', 'humidity', '%')
-        with col3:
-            get_global_metric(conn, 'wind_speed',
-                              'Highest', 'wind speeds', 'km/h')
-            get_global_metric(conn, 'precipitation_prob',
-                              'Most', 'chance of rain', '%')
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        get_global_metric(conn, 'temperature',
+                          'Highest', 'temperature', '°C')
+        get_global_metric(conn, 'cloud_cover', 'Least', 'cloud cover', '%')
+    with col2:
+        get_global_metric(conn, 'temperature',
+                          'Lowest', 'temperature', '°C')
+        get_global_metric(conn, 'humidity', 'Most', 'humidity', '%')
+    with col3:
+        get_global_metric(conn, 'wind_speed',
+                          'Highest', 'wind speeds', 'km/h')
+        get_global_metric(conn, 'precipitation_prob',
+                          'Most', 'chance of rain', '%')
