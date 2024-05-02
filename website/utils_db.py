@@ -3,6 +3,7 @@ from flask import render_template
 from psycopg2 import connect
 from psycopg2.extensions import connection
 from utils import get_standard_long_lat, get_postcode_long_lat, get_location_names
+import pandas as pd
 
 ERROR_CODE = -1
 
@@ -26,7 +27,7 @@ def add_to_database(table: str, data: dict, conn: connection) -> None:
     values = list(data.values())
     with conn.cursor() as cur:
         cur.execute(query, values)
-        conn.commit()
+    conn.commit()
 
 
 def get_id(table: str, column: str, value: str, conn: connection) -> int:
@@ -114,3 +115,40 @@ def check_row_exists(conn, table_name, column1, value1, column2, value2) -> bool
         cur.execute(query, (value1, value2))
         exists = cur.fetchone()[0]
     return True if exists else False
+
+
+def execute_query(conn: connection, query: str) -> pd.DataFrame:
+    """Executes a SQL query and returns the results as a pandas DataFrame."""
+    with conn.cursor() as cur:
+        cur.execute(query)
+        rows = cur.fetchall()
+        columns = [desc[0] for desc in cur.description]
+
+    return pd.DataFrame(rows, columns=columns)
+
+
+def prepare_data_frame(conn: connection, email: str) -> pd.DataFrame:
+    """Prepares a complete data frame combining user details with weather forecasts."""
+    user_details_query = """
+        SELECT *
+        FROM user_details AS UD
+        JOIN user_location_assignment ON UD.user_id = user_location_assignment.user_id
+        JOIN location ON user_location_assignment.loc_id = location.loc_id
+        JOIN weather_report ON location.loc_id = weather_report.loc_id
+    """
+    forecast_query = """
+        SELECT *
+        FROM forecast AS F
+        JOIN weather_code WC ON F.weather_code_id = WC.weather_code_id
+        JOIN weather_report WR ON F.weather_report_id = WR.weather_report_id
+    """
+    user_details = execute_query(conn, user_details_query)
+    forecast_details = execute_query(conn, forecast_query)
+    forecast_details = forecast_details.loc[:,
+                                            ~forecast_details.columns.duplicated()]
+
+    combined_df = pd.merge(user_details, forecast_details,
+                           on='weather_report_id', suffixes=('_user', '_forecast'))
+    combined_df = combined_df.loc[:,
+                                  ~combined_df.columns.duplicated()]
+    return combined_df[combined_df['email'] == email]

@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from utils import get_details_from_post_code
 from utils_db import get_db_connection, get_id, setup_user_location, get_value_from_db, \
-    check_row_exists
+    check_row_exists, prepare_data_frame
 
 app = Flask(__name__)
 
@@ -24,6 +24,7 @@ def login_user():
         return response
     _id = get_id('user_details', 'email', email, conn)
     name = get_value_from_db('user_details', 'name', _id, 'user_id', conn)
+    conn.close()
     response = jsonify({'message': 'Login Successful', 'name': name})
     response.status_code = 200
     return response
@@ -47,6 +48,29 @@ def submit_location():
     response = jsonify({'message': 'User location added successfully'})
     response.status_code = 200
     return response
+
+
+@app.route('/get_details', methods=['POST'])
+def get_details():
+    load_dotenv()
+    email = request.json['email']
+    password = request.json['password']
+
+    try:
+        conn = get_db_connection(ENV)
+        df = prepare_data_frame(conn, email)
+        if check_row_exists(conn, 'user_details', 'email', email, 'password', password):
+
+            if df.empty:
+                return jsonify({'message': 'No data found for the provided email'}), 404
+
+            df_json = df.to_json(orient='records')
+            return jsonify({'message': 'success', 'df': df_json}), 200
+        else:
+            return jsonify({'message': 'No data found for those credentials'}), 404
+
+    except Exception as e:
+        return jsonify({'error': f"An error occurred: {str(e)}"}), 500
 
 
 if __name__ == '__main__':
