@@ -8,17 +8,16 @@ from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 import streamlit as st
 import pydeck as pdk
-from streamlit_extras.chart_container import chart_container
 
-SUN_URL = "https://commons.wikimedia.org/wiki/Category:Sun_icons#/media/File:Draw_sunny.png"
+SUN_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Weather-clear.svg/2048px-Weather-clear.svg.png"
 SUN_CLOUD_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Antu_com.librehat.yahooweather.svg/2048px-Antu_com.librehat.yahooweather.svg.png"
 CLOUD_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Antu_weather-many-clouds.svg/768px-Antu_weather-many-clouds.svg.png"
-FOG_URL = "https://commons.wikimedia.org/wiki/Category:Fog_icons#/media/File:Breeze-weather-mist-48.svg.png"
-DRIZZLE_URL = "https://commons.wikimedia.org/wiki/Category:Rain_icons#/media/File:Faenza-weather-showers-scattered-symbolic.svg.png"
-RAIN_URL = "https://commons.wikimedia.org/wiki/Category:Rain_icons#/media/File:Faenza-weather-showers-symbolic.svg.png"
-FREEZE_RAIN_URL = "https://commons.wikimedia.org/wiki/Category:Rain_icons#/media/File:Antu_weather-freezing-rain.svg.png"
-SNOW_URL = "https://commons.wikimedia.org/wiki/File:Antu_weather-snow-scattered.svg#/media/File:Antu_weather-snow-scattered.svg.png"
-THUNDER_URL = "https://commons.wikimedia.org/wiki/Category:SVG_cloud_icons#/media/File:Antu_weather-storm-day.svg.png"
+FOG_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Breeze-weather-mist-48.svg/2048px-Breeze-weather-mist-48.svg.png"
+DRIZZLE_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Faenza-weather-showers-scattered-symbolic.svg/2048px-Faenza-weather-showers-scattered-symbolic.svg.png"
+RAIN_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Breeze-weather-showers-scattered-48.svg/2048px-Breeze-weather-showers-scattered-48.svg.png"
+FREEZE_RAIN_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Antu_weather-freezing-rain.svg/2048px-Antu_weather-freezing-rain.svg.png"
+SNOW_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Antu_weather-snow-scattered.svg/2048px-Antu_weather-snow-scattered.svg.png"
+THUNDER_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Antu_weather-storm-day.svg/2048px-Antu_weather-storm-day.svg.png"
 
 
 def icon_data(weather_code):
@@ -108,6 +107,7 @@ def get_forecast_data(_conn) -> pd.DataFrame:
 
         rows = cur.fetchall()
         data_f = pd.DataFrame.from_dict(rows).drop_duplicates()
+        print(data_f)
     data_f["icon_data"] = data_f["Weather code"].apply(icon_data)
     return [d for _, d in data_f.groupby(['Weather code'])]
 
@@ -147,30 +147,26 @@ def get_location_data(_conn, location, location_type) -> pd.DataFrame:
     return data_f
 
 
-def get_locations_with_alerts(_conn):
-    """Get the loc_id and alert type if they exist in database"""
+def get_current_weather_metric_loc(_conn, variable, metric) -> pd.DataFrame:
+    """Extract analytics about current weather for a specific location"""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute("""SET timezone='Europe/London'""")
-        cur.execute("""SELECT AL.name as "Alert type", SL.severity_level as "Severity",
-                    L.loc_name as "Location", L.loc_id, MIN(F.forecast_timestamp) as min_time, MAX(F.forecast_timestamp) as max_time
-                    FROM weather_alert AS WA
-                    JOIN forecast AS F ON (WA.forecast_id = F.forecast_id)
-                    JOIN severity_level AS SL ON (WA.severity_level_id = SL.severity_level_id)
-                    JOIN alert_type AS AL ON (WA.alert_type_id = AL.alert_type_id)
-                    JOIN weather_report AS WR ON (F.weather_report_id = WR.weather_report_id)
-                    JOIN location AS L ON (WR.loc_id = L.loc_id)
-                    WHERE SL.severity_level_id < 4
-                    AND F.forecast_timestamp > NOW()
-                    GROUP BY L.loc_id, "Alert type", "Severity", SL.severity_level_id
-                    ORDER BY SL.severity_level_id DESC, L.loc_id ASC
+        cur.execute(f"""SELECT l.loc_name as "Location", f.{variable}
+                    FROM location AS l
+                    JOIN weather_report as w
+                    ON (l.loc_id=w.loc_id)
+                    JOIN forecast as f
+                    ON (f.weather_report_id=w.weather_report_id)
+                    WHERE F.forecast_timestamp = '{time_rounder(datetime.now())}'
+                    AND f.{variable} IN (
+                    SELECT {metric}(f.{variable}) from forecast as f
+                    WHERE F.forecast_timestamp = '{time_rounder(datetime.now())}'
+                    )
+                    GROUP BY F.forecast_timestamp, l.loc_id, f.forecast_id
                     """)
 
         rows = cur.fetchall()
-        data_f = pd.DataFrame(rows)
-    data_f["icon_data"] = None
+        data_f = pd.DataFrame.from_dict(rows)
 
-    for i in data_f.index:
-        data_f["icon_data"][i] = icon_data
     return data_f
 
 
@@ -185,8 +181,8 @@ def get_map(loc_data, lat, lon, location_type):
         zoom = 6.5
         get_size = 30
     elif location_type == 'UK':
-        zoom = 5.2
-        get_size = 30
+        zoom = 4.3
+        get_size = 20
     st.pydeck_chart(pdk.Deck(
         map_style='dark',
         initial_view_state=pdk.ViewState(
@@ -194,6 +190,8 @@ def get_map(loc_data, lat, lon, location_type):
             longitude=lon,
             zoom=zoom,
             pitch=30,
+            max_zoom=zoom + 10,
+            min_zoom=zoom
         ),
         layers=[
             pdk.Layer(
@@ -211,6 +209,31 @@ def get_map(loc_data, lat, lon, location_type):
         tooltip={'html': '<b>Weather:</b> {Weather}\
                  <b>Location:</b> {Location}',
                  'style': {"backgroundColor": "navyblue", 'color': '#87CEEB', 'font-size': '100%'}}))
+
+
+def write_floods(floods):
+    """Write streamlit warnings for flood alerts."""
+    for _, flood in floods.iterrows():
+        if flood["Severity"] == "Alert":
+            icon = "❕"
+        elif flood["Severity"] == "Warning":
+            icon = "⚠️"
+        elif flood["Severity"] == "Severe Warning":
+            icon = "🚨"
+        st.warning(
+            f'**{flood["County"]}** had a **Flood {flood["Severity"]}** raised at **{flood["Time raised"]}**.', icon=icon)
+
+
+def get_global_metric(conn, variable, metric, title, unit):
+    if metric == 'Most' or metric == 'Highest':
+        info = get_current_weather_metric_loc(conn, variable, 'max')
+        location = info['Location'].values[0]
+        value = str(info[variable].values[0]) + ' ' + unit
+    elif metric == 'Least' or metric == 'Lowest':
+        info = get_current_weather_metric_loc(conn, variable, 'min')
+        location = info['Location'].values[0]
+    value = str(info[variable].values[0]) + ' ' + unit
+    st.metric(f'{metric} {title}', f'{location}: {value}')
 
 
 if __name__ == "__main__":
@@ -241,31 +264,30 @@ if __name__ == "__main__":
         print(lat, lon)
         w_map = get_map(forecast_d, lat, lon, loc_type)
     else:
-        alerts = get_locations_with_alerts(conn)
-        print(alerts)
-        for _, alert in alerts.iterrows():
-            if alert["Severity"] == "Alert":
-                icon = "❕"
-            elif alert["Severity"] == "Warning":
-                icon = "⚠️"
-            elif alert["Severity"] == "Severe Warning":
-                icon = "🚨"
-            if alert["Alert type"] == "Air Quality":
-                key_words = 'had an'
-            else:
-                key_words = 'has a'
-            if alert["min_time"] != alert["max_time"]:
-                st.warning(
-                    f'**{alert["Location"]}** {key_words} **{alert["Alert type"]} {alert["Severity"]}** from **{alert["min_time"]}** to **{alert["max_time"]}**.', icon=icon)
-            else:
-                st.warning(
-                    f'**{alert["Location"]}** {key_words} **{alert["Alert type"]} {alert["Severity"]}** at **{alert["min_time"]}**.', icon=icon)
-        w_map = get_map(forecast_d, 52.536, -2.5341, 'UK')
-        with chart_container(forecast_d):
+        st.markdown('## Map')
+        w_map = get_map(forecast_d, 54.536, -2.5341, 'UK')
+        st.markdown('## Metrics')
+        st.markdown("""
+                        <style>
+                        [data-testid="stMetricValue"] {
+                            font-size: 20px;
+                        }
+                        </style>
+                        """,
+                    unsafe_allow_html=True,
+                    )
 
-            st.write("Here's a cool chart")
-            forecast_d["Forecast time"] = pd.to_datetime(
-                forecast_d['Forecast time'])
-            graph_hourly = forecast_d.sort_values(by='Forecast time')
-            st.area_chart(
-                graph_hourly[["Temperature", "Feels like"]])
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            get_global_metric(conn, 'temperature',
+                              'Highest', 'temperature', '°C')
+            get_global_metric(conn, 'cloud_cover', 'Least', 'cloud cover', '%')
+        with col2:
+            get_global_metric(conn, 'temperature',
+                              'Lowest', 'temperature', '°C')
+            get_global_metric(conn, 'humidity', 'Most', 'humidity', '%')
+        with col3:
+            get_global_metric(conn, 'wind_speed',
+                              'Highest', 'wind speeds', 'km/h')
+            get_global_metric(conn, 'precipitation_prob',
+                              'Most', 'chance of rain', '%')

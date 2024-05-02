@@ -1,0 +1,9 @@
+streamlit
+altair
+psycopg2-binary
+pandas
+numpy
+pydeck
+python-dotenv
+requests
+vega_datasets
