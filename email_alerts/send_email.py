@@ -55,7 +55,7 @@ def send_to_each_recipient(config: dict, tables: list[str]) -> None:
     update_all_alert_tables(config, recipients_alerts)
 
 
-if __name__ == "__main__":
+def handler(event: list[dict], context: dict = None) -> None:
     """AWS Lambda handler to run the script."""
 
     load_dotenv()
