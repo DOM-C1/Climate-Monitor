@@ -47,4 +47,10 @@ All tools chosen optimise for cost, complexity, and scalability.
 
 ## The architecture diagram
 
-![ERD](architecture-diagram.png)
+![arc-diagram](architecture-diagram.png)
+
+## Installation Guide
+
+To install and run this software , this you will need to do three things in this order:
+1. Setup the Amazon Web Services, with Terraform
+2. 

@@ -8,7 +8,7 @@ import pandas as pd
 from boto3 import client
 from dotenv import load_dotenv
 from psycopg2 import connect
-from psycopg2.extras import connection
+from psycopg2.extensions import connection
 
 WEATHER_EMOJIS = {
     "Clear Sky": "☀️",
@@ -210,3 +210,9 @@ async def format_forecast_report(df: pd.DataFrame, target_email: str) -> str:
 
         reports += f"<h2>{location}</h2>{html}"
     return format_html(reports)
+
+load_dotenv()
+conn = get_db_connection(ENV)
+df = prepare_data_frame(conn)
+print(df[df['email'] == 'example@example.com']['loc_id_user'].unique())
+conn.close()

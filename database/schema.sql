@@ -74,6 +74,7 @@ CREATE TABLE weather_report(
 CREATE TABLE user_details(
     user_id SMALLINT NOT NULL UNIQUE GENERATED ALWAYS AS IDENTITY,
     email VARCHAR(70) UNIQUE NOT NULL,
+    password VARCHAR(40),
     name VARCHAR(60) NOT NULL,
     PRIMARY KEY(user_id)
 );
