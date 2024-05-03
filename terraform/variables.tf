@@ -45,3 +45,7 @@ variable "SENDER_EMAIL" {
 variable "WEATHER_WARNING_TABLE" {
     type = string
 }
+
+variable "HASH_KEY" {
+    type = string
+}

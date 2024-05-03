@@ -1,14 +1,14 @@
-data "aws_ecr_repository" "dashboard-repo" {
-  name = "climate-monitoring_daily_report"
+data "aws_ecr_repository" "backend-repo" {
+  name = "climate-monitoring_website"
 }
 
-data "aws_ecr_image" "dashboard-image" {
-  repository_name = data.aws_ecr_repository.dashboard-repo.name
+data "aws_ecr_image" "backend-image" {
+  repository_name = data.aws_ecr_repository.backend-repo.name
   image_tag       = "latest"
 }
 
-resource "aws_ecs_task_definition" "dashboard-task-definition" {
-  family                   = "c10-climate-dashboard-terraform"
+resource "aws_ecs_task_definition" "backend-task-definition" {
+  family                   = "c10-climate-backend-terraform"
   network_mode             = "awsvpc"
   execution_role_arn       = "arn:aws:iam::129033205317:role/ecsTaskExecutionRole"
   task_role_arn            = "arn:aws:iam::129033205317:role/ecs_role"
@@ -18,14 +18,14 @@ resource "aws_ecs_task_definition" "dashboard-task-definition" {
 
   container_definitions = jsonencode([
     {
-      name         = "c10-climate-dashboard-ecr"
-      image        = aws_ecr_image.dashboard-image.image_uri
+      name         = "c10-climate-backend-ecr"
+      image        = aws_ecr_image.backend-image.image_uri
       cpu          = 0
       essential    = true
       portMappings = [
         {
-          containerPort = 8501
-          hostPort      = 8501
+          containerPort = 5000
+          hostPort      = 5000
           protocol      = "tcp"
         }
       ]
@@ -49,16 +49,12 @@ resource "aws_ecs_task_definition" "dashboard-task-definition" {
         {
           name  = "DB_PASSWORD"
           value = "${var.DB_PASSWORD}"
-        },
-        {
-          name = "HASH_KEY"
-          value = "${var.HASH_KEY}"
         }
       ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = "/ecs/c10-climate-dashboard"
+          "awslogs-group"         = "/ecs/c10-climate-backend"
           "awslogs-region"        = "${var.REGION}"
           "awslogs-stream-prefix" = "ecs"
           "awslogs-create-group"  = "true"
@@ -73,16 +69,16 @@ resource "aws_ecs_task_definition" "dashboard-task-definition" {
   }
 }
 
-resource "aws_security_group" "dashboard-security-group" {
-    name = "c10-climate-dashboard-sg"
-    description = "c10-climate-dashboard-sg"
+resource "aws_security_group" "backend-security-group" {
+    name = "c10-climate-backend-sg"
+    description = "c10-climate-backend-sg"
     vpc_id = data.aws_vpc.cohort_10_vpc.id
     
     ingress {
         cidr_blocks = ["0.0.0.0/0"]
-        from_port = 8501
+        from_port = 5000
         protocol = "tcp"
-        to_port = 8501
+        to_port = 5000
     }
 
     egress {
@@ -94,14 +90,10 @@ resource "aws_security_group" "dashboard-security-group" {
     }
 }
 
-data "aws_ecs_cluster" "ecs-cluster" {
-    cluster_name = "c10-ecs-cluster"
-}
-
-resource "aws_ecs_service" "dashboard-service" {
-  name            = "c10-climate-dashboard-service-terraform"
+resource "aws_ecs_service" "backend-service" {
+  name            = "c10-climate-backend-service-terraform"
   cluster         = data.aws_ecs_cluster.ecs-cluster.id
-  task_definition = aws_ecs_task_definition.dashboard-task-definition.arn
+  task_definition = aws_ecs_task_definition.backend-task-definition.arn
   desired_count   = 1
 
   network_configuration {
