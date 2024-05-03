@@ -14,31 +14,23 @@ from vega_datasets import data
 def intro():
 
     st.write("# Welcome to the Climate Monitor! :sun_small_cloud:")
+
     st.markdown(
-        f"""
-        **👈 Select a page from the menu on the left** to explore the dashboard!
-
-        **Home**: Quick search - get the coming forecast and find weather alerts by location!
-
-        **Explore**: Explore the current climate across the UK.
-
-        **Alerts across the UK**: Get the latest weather alerts, including floods and air quality warnings.
-
-        ### Want to sign up to daily newsletters, or receive notifications about weather alerts near you?
-
-        - Then check out the **Sign Up** page!""")
-    st.page_link('pages/4_Sign_Up.py')
-    st.markdown("""
-
-        ### Contributors
-        Project manager: **Dom Chambers**
-
-        Quality Assurance: **Arjun Babhania**
-
-        Architect: **Nathan McKittrick**
-
-        Architect: **Dana Weetman**
-    """
+        """<span style="font-size:1.3em;">
+        <br/>
+        <b>👈 Select a page from the menu on the left</b> to explore the dashboard!<br/><br/>
+        <b>Home</b> Quick search - get the coming forecast and find weather alerts by location!<br/>
+        <b>Explore</b>: Explore the current climate across the UK.<br/>
+        <b>Alerts across the UK</b>: Get the latest weather alerts, including floods and air quality warnings.<br/><br/>
+        <b>Want to sign up to daily newsletters, or receive notifications about weather alerts near you?</b><br/>
+        Then check out the <b>Sign Up</b> page!<br/><br/><br/></span>""", unsafe_allow_html=True)
+    st.markdown("""<span style="font-size:1.3em;">
+        <b> Contributors </b><br/>
+        Project manager: <b>Dom Chambers</b><br/>
+        Quality Assurance: <b>Arjun Babhania</b><br/>
+        Architect: <b>Nathan McKittrick</b><br/>
+        Architect: <b>Dana Weetman</b></span>
+    """, unsafe_allow_html=True
                 )
 
 
@@ -160,7 +152,8 @@ if __name__ == "__main__":
         w_map = uk_map(get_location_data(
             connection), ['location', 'county'])
         st.altair_chart(w_map, use_container_width=True)
-        st.write(
-            f"This climate monitor is currently tracking {locations['location'].count()} locations across the UK.")
-        st.write(
-            "If you want to add more locations, 👈 navigate to the **Sign Up** page!")
+        st.markdown(
+            f"""<span style="font-size: 1.3em">
+            This climate monitor is currently tracking {locations['location'].count()} locations across the UK.<br/>
+            If you want to add more locations, 👈 navigate to the <b>Sign Up</b> page!</span>""", unsafe_allow_html=True)
+    st.toast('Remember to sign up to become a user!')

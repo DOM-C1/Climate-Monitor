@@ -156,7 +156,7 @@ def get_location_forecast_day(_conn, location) -> pd.DataFrame:
     """Returns forecast data for the upcoming day for a specific location."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("SET TIMEZONE TO 'Europe/London'")
-        cur.execute(f"""SELECT L.latitude, L.longitude, f.forecast_timestamp as "Forecast time", wc.description as "Weather", f.temperature as "Temperature",
+        cur.execute(f"""SELECT L.loc_id, L.latitude, L.longitude, f.forecast_timestamp as "Forecast time", wc.description as "Weather", f.temperature as "Temperature",
                     f.apparent_temp as "Feels like", f.precipitation_prob as "Precipitation probability", f.rainfall as "Rainfall",
                     f.precipitation as "Precipitation", f.snowfall as "Snowfall", f.visibility as "Visibility", f.humidity as "Humidity",
                     f.lightning_potential as "Lightning potential", f.wind_speed as "Wind speed", f.cloud_cover as "Cloud cover"
@@ -174,22 +174,23 @@ def get_location_forecast_day(_conn, location) -> pd.DataFrame:
                     WHERE F.forecast_timestamp < NOW() + interval '8 hours'
                     AND F.forecast_timestamp > NOW() - interval '15 minutes'
                     AND L.loc_name = '{location}'
-                    GROUP BY L.latitude, L.longitude, "Forecast time", "Weather", "Temperature", "Feels like","Precipitation", "Humidity",
+                    GROUP BY L.loc_id, L.latitude, L.longitude, "Forecast time", "Weather", "Temperature", "Feels like","Precipitation", "Humidity",
                     "Precipitation probability", "Rainfall", "Snowfall", "Visibility", "Lightning potential", "Wind speed", "Cloud cover"
                     ORDER BY f.forecast_timestamp
                     """)
 
         rows = cur.fetchall()
-        data_f = pd.DataFrame.from_dict(rows).drop_duplicates()
-        print(data_f)
-    return data_f
+        data_f = pd.DataFrame.from_dict(rows).drop_duplicates().sort_values(['loc_id']).groupby([
+            'loc_id'])
+        location_dupes = [df for _, df in data_f]
+    return location_dupes[0].sort_values(['Forecast time'])
 
 
 def get_location_forecast_week(_conn, location) -> pd.DataFrame:
     """Returns forecast data for the upcoming week for a specific location."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("SET TIMEZONE TO 'Europe/London'")
-        cur.execute(f"""SELECT f.forecast_timestamp as "Forecast time", wc.description as "Weather", f.temperature as "Temperature",
+        cur.execute(f"""SELECT L.loc_id, f.forecast_timestamp as "Forecast time", wc.description as "Weather", f.temperature as "Temperature",
                     f.apparent_temp as "Feels like", f.precipitation_prob as "Precipitation probability", f.rainfall as "Rainfall",
                     f.precipitation as "Precipitation", f.snowfall as "Snowfall", f.visibility as "Visibility", f.humidity as "Humidity",
                     f.lightning_potential as "Lightning potential", f.wind_speed as "Wind speed", f.cloud_cover as "Cloud cover"
@@ -206,15 +207,18 @@ def get_location_forecast_week(_conn, location) -> pd.DataFrame:
                     ON (F.weather_code_id=wc.weather_code_id)
                     WHERE F.forecast_timestamp > NOW()
                     AND l.loc_name = '{location}'
-                    GROUP BY "Forecast time", "Weather", "Temperature", "Feels like", "Precipitation", "Humidity",
+                    GROUP BY L.loc_id, "Forecast time", "Weather", "Temperature", "Feels like", "Precipitation", "Humidity",
                     "Precipitation probability", "Rainfall", "Snowfall", "Visibility", "Lightning potential", "Wind speed", "Cloud cover"
                     ORDER BY f.forecast_timestamp
                     """)
 
         rows = cur.fetchall()
         data_f = pd.DataFrame.from_dict(rows)
+        data_f = pd.DataFrame.from_dict(rows).drop_duplicates().sort_values(['loc_id']).groupby([
+            'loc_id'])
+        location_dupes = [df for _, df in data_f]
 
-    return data_f
+    return location_dupes[0].sort_values(['Forecast time'])
 
 
 def get_air_quality(_conn, location) -> pd.DataFrame:
@@ -331,12 +335,12 @@ def compass(wind_direction):
     """Create a compass display."""
     compass_star = "https://upload.wikimedia.org/wikipedia/commons/b/bb/Windrose.svg"
     a = {'x': [0], 'y': [0], 'img': [compass_star],
-         'arr_x': [0.95*np.cos((wind_direction-90)/180*np.pi)], 'arr_y': [-0.95*np.sin((wind_direction-90)/180*np.pi)]}
+         'arr_x': [0.75*np.cos((wind_direction-90)/180*np.pi)], 'arr_y': [-0.75*np.sin((wind_direction-90)/180*np.pi)]}
     c = {'c_x': [-1.2, 1.2, -1.2, 1.2], 'c_y': [-1.2, -1.2, 1.2, 1.2]}
     df = pd.DataFrame(a)
     corners = pd.DataFrame(c)
 
-    star = alt.Chart(df).mark_image(width=220, height=220).encode(
+    star = alt.Chart(df).mark_image(width=200, height=200).encode(
         x=alt.X('x', axis=alt.Axis(ticks=False,
                                    domain=False, labels=False, title=None)),
         y=alt.Y('y', axis=alt.Axis(ticks=False,
@@ -354,7 +358,7 @@ def compass(wind_direction):
         width=260,
         height=260
     )
-    dot = alt.Chart(df).mark_point(size=800, color="gold", opacity=1).encode(
+    dot = alt.Chart(df).mark_point(size=700, color="gold", opacity=1).encode(
         x=alt.X('arr_x', axis=alt.Axis(
             ticks=False, domain=False, labels=False, title=None)),
         y=alt.Y('arr_y', axis=alt.Axis(
@@ -364,7 +368,7 @@ def compass(wind_direction):
         width=260,
         height=260
     )
-    dot_border = alt.Chart(df).mark_point(size=850, color="black", align="center", baseline="middle", opacity=1).encode(
+    dot_border = alt.Chart(df).mark_point(size=750, color="black", align="center", baseline="middle", opacity=1).encode(
         x=alt.X('arr_x', axis=alt.Axis(
             ticks=False, domain=False, labels=False, title=None)),
         y=alt.Y('arr_y', axis=alt.Axis(
@@ -377,7 +381,7 @@ def compass(wind_direction):
 
     circle = alt.Chart(df).mark_arc(color="#ADD8E6").encode(
         theta=alt.value(20),
-        radius=alt.value(120),
+        radius=alt.value(118),
         x=alt.X('x', axis=alt.Axis(ticks=False,
                                    domain=False, labels=False, title=None)),
         y=alt.Y('y', axis=alt.Axis(ticks=False,
@@ -388,7 +392,7 @@ def compass(wind_direction):
     )
     border = alt.Chart(df).mark_arc(color="black").encode(
         theta=alt.value(20),
-        radius=alt.value(130),
+        radius=alt.value(122),
         x=alt.X('x', axis=alt.Axis(ticks=False,
                                    domain=False, labels=False, title=None)),
         y=alt.Y('y', axis=alt.Axis(ticks=False,
@@ -759,16 +763,16 @@ if __name__ == "__main__":
     conn = connect_to_db(dict(ENV))
     location, lat, lon = create_location_selection_box(conn)
     if location != 'Select a location...':
-        floods = get_flood_alerts(conn, location)
+        # floods = get_flood_alerts(conn, location)
         alerts = pd.concat([get_air_quality_alerts(conn, location),
                            get_weather_alerts(conn, location)])
-        if not floods.empty:
-            errors, warnings = write_floods(floods)
-            for error in errors:
-                st.error(error[0], icon=error[1])
+        # if not floods.empty:
+        #     errors, warnings = write_floods(floods)
+        #     for error in errors:
+        #         st.error(error[0], icon=error[1])
 
-            for warning in warnings:
-                st.warning(warning[0], icon=warning[1])
+        #     for warning in warnings:
+        #         st.warning(warning[0], icon=warning[1])
         write_alerts(alerts, location)
 
         st.markdown("# Current weather")

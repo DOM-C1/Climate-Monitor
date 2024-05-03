@@ -76,11 +76,11 @@ def calculate_ice_alerts(temperature: float) -> int:
 
 def calculate_lightning_alerts(lightning: pd.Series) -> int:
     """Find extreme lightning alerts amongst lightning potential data."""
-    if 2500 <= lightning:
+    if 2.5 <= lightning:
         return 1
-    if 1000 <= lightning < 2500:
+    if 1 <= lightning < 2.5:
         return 2
-    if 300 <= lightning < 1000:
+    if 0 <= lightning < 1:
         return 3
     return 4
 

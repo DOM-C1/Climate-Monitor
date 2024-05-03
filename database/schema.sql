@@ -1,19 +1,20 @@
+DROP DATABASE IF EXISTS weather;
 CREATE DATABASE weather;
 \c weather
 
-DROP TABLE air_quality;
-DROP TABLE user_location_assignment;
-DROP TABLE weather_alert;
-DROP TABLE flood_warnings;
-DROP TABLE forecast;
-DROP TABLE weather_report;
-DROP TABLE location;
-DROP TABLE user_details;
-DROP TABLE weather_code;
-DROP TABLE alert_type;
-DROP TABLE severity_level;
-DROP TABLE county;
-DROP TABLE country;
+DROP TABLE IF EXISTS air_quality;
+DROP TABLE IF EXISTS user_location_assignment;
+DROP TABLE IF EXISTS weather_alert;
+DROP TABLE IF EXISTS flood_warnings;
+DROP TABLE IF EXISTS forecast;
+DROP TABLE IF EXISTS weather_report;
+DROP TABLE IF EXISTS location;
+DROP TABLE IF EXISTS user_details;
+DROP TABLE IF EXISTS weather_code;
+DROP TABLE IF EXISTS alert_type;
+DROP TABLE IF EXISTS severity_level;
+DROP TABLE IF EXISTS county;
+DROP TABLE IF EXISTS country;
 
 CREATE TABLE country(
     country_id SMALLINT NOT NULL UNIQUE GENERATED ALWAYS AS IDENTITY,
@@ -75,6 +76,7 @@ CREATE TABLE user_details(
     user_id SMALLINT NOT NULL UNIQUE GENERATED ALWAYS AS IDENTITY,
     email VARCHAR(70) UNIQUE NOT NULL,
     name VARCHAR(60) NOT NULL,
+    password VARCHAR(40) NOT NULL,
     PRIMARY KEY(user_id)
 );
 
