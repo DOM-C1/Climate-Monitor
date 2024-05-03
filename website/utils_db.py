@@ -152,3 +152,27 @@ def prepare_data_frame(conn: connection, email: str) -> pd.DataFrame:
     combined_df = combined_df.loc[:,
                                   ~combined_df.columns.duplicated()]
     return combined_df[combined_df['email'] == email]
+
+
+def update_loc_assignment(conn: connection, _id_name: str, _id: int, column: str, value: str) -> None:
+    """ Updates user location assignment so that if a user updates their details 
+        it gets updated through this."""
+    query = f"""
+    UPDATE user_location_assignment
+    SET {column} = %s
+    WHERE {_id} = %s;
+    """
+    values = (value, _id)
+    with conn.cursor() as cur:
+        cur.execute(query, values)
+    conn.commit()
+    return None
+
+
+def delete_user(conn, _id):
+    """Deletes a users record."""
+    with conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM user_location_assignment WHERE user_id = %s;", (_id,))
+        cur.execute("DELETE FROM user_details WHERE user_id = %s;", (_id,))
+        conn.commit()

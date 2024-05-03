@@ -5,14 +5,14 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from utils import get_details_from_post_code
 from utils_db import get_db_connection, get_id, setup_user_location, get_value_from_db, \
-    check_row_exists, prepare_data_frame
+    check_row_exists, prepare_data_frame, update_loc_assignment, delete_user
 
 app = Flask(__name__)
 
 
 @app.route('/login', methods=['POST'])
 def login_user():
-    """When a request is sent, the users new location is sent to the database."""
+    """This function validates the login of a user."""
     load_dotenv()
     conn = get_db_connection(ENV)
     data = request.json
@@ -52,6 +52,7 @@ def submit_location():
 
 @app.route('/get_details', methods=['POST'])
 def get_details():
+    """This returns a dataframe for a particular users details."""
     load_dotenv()
     email = request.json['email']
     password = request.json['password']
@@ -71,6 +72,47 @@ def get_details():
 
     except Exception as e:
         return jsonify({'error': f"An error occurred: {str(e)}"}), 500
+
+
+@app.route('/update_notifs', methods=['POST'])
+def update_notifs():
+    """Updates the notifications for a user."""
+    load_dotenv()
+    email = request.json['email']
+    password = request.json['password']
+    alerts = request.json['alerts']
+    reports = request.json['reports']
+
+    conn = get_db_connection(ENV)
+    if check_row_exists(conn, 'user_details', 'email', email, 'password', password):
+        for dict in alerts:
+            _id = dict['id']
+            value = dict['value']
+            update_loc_assignment(
+                conn, 'user_location_id ', _id, 'alert_opt_in', value)
+        for dict in reports:
+            _id = dict['id']
+            value = dict['value']
+            update_loc_assignment(
+                conn, 'user_location_id ', _id, 'report_opt_in', value)
+
+        return jsonify({'message': 'success'}), 200
+
+    return jsonify({'message': 'No data found for those credentials'}), 404
+
+
+@ app.route('/delete_user', methods=['POST'])
+def del_user():
+    """If a user wants to delete their account, they can do so through here."""
+    email = request.json['email']
+    password = request.json['password']
+    load_dotenv()
+    conn = get_db_connection(ENV)
+    if check_row_exists(conn, 'user_details', 'email', email, 'password', password):
+        _id = get_id('user_details', 'email', email, conn)
+        delete_user(conn, _id)
+        return jsonify({'message': 'success'}), 200
+    return jsonify({'message': 'Error deleting user'}), 500
 
 
 if __name__ == '__main__':
