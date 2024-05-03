@@ -5,12 +5,14 @@ from os import environ as ENV
 from dotenv import load_dotenv
 import pandas as pd
 load_dotenv()
-DETAILS_URL = "http://13.42.32.229:5000/get_details"
-LOGIN_URL = "http://13.42.32.229:5000/login"
-USER_URL = "http://13.42.32.229:5000/submit-user"
+DETAILS_URL = "http://18.170.61.182:5000/get_details"
+LOGIN_URL = "http://18.170.61.182:5000/login"
+USER_URL = "http://18.170.61.182:5000/submit-user"
+LOC_URL = "http://18.170.61.182:5000/update_notifs"
+DEL_URL = "http://18.170.61.182:5000/delete_user"
 HEADERS = {'Content-Type': 'application/json'}
 
-st.title('Welcome to Our Service!')
+st.title('Here you can find all things user located!')
 
 if not st.session_state.get('is_logged_in'):
     if 'already_signed_up' not in st.session_state:
@@ -47,6 +49,7 @@ if not st.session_state.get('is_logged_in'):
                         st.session_state['email'] = email
                         st.session_state['hash_password'] = hashed_output
                         st.session_state['name'] = response.json()['name']
+                        st.rerun()
                     else:
                         st.error(
                             'Login failed. Please check your credentials.', icon='🚫')
@@ -81,40 +84,74 @@ if not st.session_state.get('is_logged_in'):
                         USER_URL, json=data, headers=HEADERS)
                     if response.status_code == 200:
                         st.success('Details successfully added.', icon="✅")
+                        st.session_state['is_logged_in'] = True
+                        st.session_state['email'] = email
+                        st.session_state['hash_password'] = hash_password
+                        st.session_state['name'] = name
+                        st.rerun()
+
                     else:
                         st.error('Something went wrong', icon='🤖')
 else:
-    st.title('Track your locations and change preferences')
-if st.session_state.get('is_logged_in'):
     with st.sidebar:
-        for _ in range(10):
-            st.sidebar.markdown(" ")
-        st.button("Log-out")
-        if st.button:
+        if st.button('Sign Out'):
             st.session_state['is_logged_in'] = False
+            st.session_state['email'] = None
+            st.session_state['hash_password'] = None
+            st.session_state['name'] = None
+            st.rerun()
 
-    if st.button('Submit'):
-        st.experimental_rerun()
-
+    st.subheader('Track your locations and change preferences')
+if st.session_state.get('is_logged_in'):
     data = {'email': st.session_state['email'],
             'password': st.session_state['hash_password']}
     response = requests.post(DETAILS_URL, headers=HEADERS, json=data)
-    df = response.json()['df']
-    df = pd.read_json(df, orient='records')
-    for location in df['loc_name'].unique().tolist():
-        alert = df[df['loc_name'] ==
-                   location]['report_opt_in'].unique()[0]
-        report = alert = df[df['loc_name'] ==
-                            location]['report_opt_in'].unique()[0]
-        cols = st.columns(3)
+    if response.status_code == 200:
+        df = response.json().get('df')
+        df = pd.read_json(df, orient='records')
 
-        cols[0].write(location)
-        alerts = cols[1].checkbox(
-            'Sign-up for alerts', key=f"alerts_{location}", value=bool(alert))
-        reports = cols[2].checkbox(
-            'Sign-up for reports', key=f"reports_{location}", value=bool(report))
-        print(reports)
-    st.title('Add a location.')
+        for location in df['loc_name'].unique():
+            location_data = df[df['loc_name'] == location]
+            default_alert = location_data['alert_opt_in'].unique()[0]
+            default_report = location_data['report_opt_in'].unique()[0]
+
+            cols = st.columns(3)
+            cols[0].write(location)
+
+            alert_key = f"alerts_{location}"
+            report_key = f"reports_{location}"
+            if alert_key not in st.session_state:
+                st.session_state[alert_key] = bool(default_alert)
+            if report_key not in st.session_state:
+                st.session_state[report_key] = bool(default_report)
+
+            alerts = cols[1].checkbox(
+                'Sign-up for alerts', key=alert_key, value=st.session_state[alert_key])
+            reports = cols[2].checkbox(
+                'Sign-up for reports', key=report_key, value=st.session_state[report_key])
+
+        if st.button('Submit Changes'):
+            changes = {'alerts': [], 'reports': [
+            ], 'email': st.session_state['email'], 'password': st.session_state['hash_password']}
+            for location in df['loc_name'].unique():
+                location_data = df[df['loc_name'] == location]
+                id = location_data['user_location_id'].tolist()[0]
+                alert_value = st.session_state.get(f"alerts_{location}")
+                report_value = st.session_state.get(f"reports_{location}")
+                if alert_value:
+                    changes['alerts'].append({'id': id, 'value': alert_value})
+                if report_value:
+                    changes['reports'].append(
+                        {'id': id, 'value': report_value})
+            response = requests.post(
+                LOC_URL, json=changes, headers=HEADERS)
+            if response.status_code == 200:
+                st.success('Details added successfully.')
+                st.rerun()
+
+            else:
+                st.error('Error')
+        st.title('Add a location.')
 
     with st.form(key='user_form'):
         load_dotenv()
@@ -131,8 +168,24 @@ if st.session_state.get('is_logged_in'):
             response = requests.post(
                 USER_URL, json=data, headers=HEADERS)
             if response.status_code == 200:
-                st.success('Details successfully added.', icon="✅")
+                st.success(
+                    'Your preferences have successfully been updated.', icon="✅")
+                st.rerun()
             else:
                 st.error('Something went wrong', icon='🤖')
+
+    with st.popover('Delete Acount'):
+        if st.button('Are you sure you want to delete your account?'):
+            data = {'email': st.session_state['email'],
+                    'password': st.session_state['hash_password']}
+            response = requests.post(DEL_URL, json=data, headers=HEADERS)
+            if response.status_code == 200:
+                st.success('User deleted successfully')
+                st.session_state['is_logged_in'] = False
+                st.session_state['email'] = None
+                st.session_state['hash_password'] = None
+                st.experimental_rerun()
+            else:
+                st.error('Error: Unable to delete user')
 else:
     st.write('Please sign-in to update your preferences')

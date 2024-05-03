@@ -157,7 +157,7 @@ def format_html(report: str) -> str:
             border-bottom: 1px solid #dddddd;
         }}
         th {{
-            background-color: #009879;
+            background-color: #82A6F4;
             color: #ffffff;
         }}
         tr:nth-of-type(even) {{
@@ -210,9 +210,3 @@ async def format_forecast_report(df: pd.DataFrame, target_email: str) -> str:
 
         reports += f"<h2>{location}</h2>{html}"
     return format_html(reports)
-
-load_dotenv()
-conn = get_db_connection(ENV)
-df = prepare_data_frame(conn)
-print(df[df['email'] == 'example@example.com']['loc_id_user'].unique())
-conn.close()
