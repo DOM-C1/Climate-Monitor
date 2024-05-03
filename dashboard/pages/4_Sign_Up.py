@@ -120,15 +120,16 @@ if st.session_state.get('is_logged_in'):
 
             alert_key = f"alerts_{location}"
             report_key = f"reports_{location}"
+
             if alert_key not in st.session_state:
                 st.session_state[alert_key] = bool(default_alert)
             if report_key not in st.session_state:
                 st.session_state[report_key] = bool(default_report)
 
             alerts = cols[1].checkbox(
-                'Sign-up for alerts', key=alert_key, value=st.session_state[alert_key])
+                'Sign-up for alerts', key=alert_key)
             reports = cols[2].checkbox(
-                'Sign-up for reports', key=report_key, value=st.session_state[report_key])
+                'Sign-up for reports', key=report_key)
 
         if st.button('Submit Changes'):
             changes = {'alerts': [], 'reports': [
@@ -156,7 +157,7 @@ if st.session_state.get('is_logged_in'):
     with st.form(key='user_form'):
         load_dotenv()
         location = st.text_input(
-            'Location - Please enter your full postcode', placeholder='e.g. AB12 3CD')
+            'Location - Please enter the full postcode', placeholder='e.g. AB12 3CD')
         sign_newsletter = st.checkbox('Sign-up for the daily newsletter')
         sign_alerts = st.checkbox('Sign-up for alerts')
         email = st.session_state['email']
