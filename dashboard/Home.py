@@ -145,6 +145,7 @@ def get_air_quality_alerts(_conn, location):
         data_f["Alert type"] = None
         data_f['min_time'] = data_f['min_time'].apply(time_rounder)
         data_f['max_time'] = data_f['max_time'].apply(time_rounder)
+        data_f = data_f[data_f['max_time'] >= time_rounder(datetime.now())]
 
         for i in data_f.index:
             data_f["Alert type"][i] = 'Air Quality'
@@ -302,7 +303,6 @@ def get_forecast_data(_conn) -> pd.DataFrame:
 
 def get_map(loc_data, lon, lat):
     """Generate a pydeck map, zoomed in on a specific location."""
-    print(loc_data)
     st.pydeck_chart(pdk.Deck(
         map_style='dark',
         initial_view_state=pdk.ViewState(
@@ -333,19 +333,27 @@ def get_map(loc_data, lon, lat):
 
 def compass(wind_direction):
     """Create a compass display."""
-    compass_star = "https://upload.wikimedia.org/wikipedia/commons/b/bb/Windrose.svg"
-    a = {'x': [0], 'y': [0], 'img': [compass_star],
+    compass_star = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Compass_Rose_en_small_N.svg/2835px-Compass_Rose_en_small_N.svg.png"
+    nautical_rose = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Compass_Rose-Black.svg/2048px-Compass_Rose-Black.svg.png"
+    a = {'x': [0], 'y': [0], 'img': [compass_star], 'rose': [nautical_rose],
          'arr_x': [0.75*np.cos((wind_direction-90)/180*np.pi)], 'arr_y': [-0.75*np.sin((wind_direction-90)/180*np.pi)]}
     c = {'c_x': [-1.2, 1.2, -1.2, 1.2], 'c_y': [-1.2, -1.2, 1.2, 1.2]}
     df = pd.DataFrame(a)
     corners = pd.DataFrame(c)
 
-    star = alt.Chart(df).mark_image(width=200, height=200).encode(
+    star = alt.Chart(df).mark_image(width=230, height=230).encode(
         x=alt.X('x', axis=alt.Axis(ticks=False,
                                    domain=False, labels=False, title=None)),
         y=alt.Y('y', axis=alt.Axis(ticks=False,
                                    domain=False, labels=False, title=None)),
         url='img',
+        tooltip=alt.value(None))
+    nautical = alt.Chart(df).mark_image(width=195, height=195).encode(
+        x=alt.X('x', axis=alt.Axis(ticks=False,
+                                   domain=False, labels=False, title=None)),
+        y=alt.Y('y', axis=alt.Axis(ticks=False,
+                                   domain=False, labels=False, title=None)),
+        url='rose',
         tooltip=alt.value(None))
 
     points = alt.Chart(corners).mark_point(size=0).encode(
@@ -403,7 +411,7 @@ def compass(wind_direction):
         height=260
     )
 
-    compass = alt.layer(points, border, circle, star, dot_border, dot, title=alt.Title(' ', fontSize=0.5)).configure_view(
+    compass = alt.layer(points, border, circle, nautical, star, dot_border, dot, title=alt.Title(' ', fontSize=0.5)).configure_view(
         strokeWidth=0).configure_axis(grid=False).properties(
         width=260,
         height=260

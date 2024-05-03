@@ -95,7 +95,6 @@ def get_air_quality_alerts(_conn):
 
         for i in data_f.index:
             data_f["Alert type"][i] = 'Air Quality'
-        print(data_f)
         return data_f.drop_duplicates()
 
     return pd.DataFrame()
@@ -211,12 +210,11 @@ if __name__ == "__main__":
     w_alerts = get_locations_with_alerts(conn)
     air_alerts = get_air_quality_alerts(conn)
     floods = get_flood_alerts(conn)
-
+    st.markdown("### Flood warnings")
     if floods:
         severes = []
         warnings = []
         alerts = []
-        st.markdown("### Flood warnings")
         for _, location in floods:
             flood_alerts = write_floods(location)
             severes += flood_alerts[0]
@@ -232,12 +230,13 @@ if __name__ == "__main__":
             for alert in alerts:
                 st.markdown(
                     f"""<span style="background-color:rgb(255,205,0,0.2);color:#423d01;font-size:1.2em;border-radius:5px;padding:8px;">{alert}</span>""", unsafe_allow_html=True)
-
+    else:
+        st.markdown("""No flood alerts to show!""")
+    st.markdown("### Weather warnings")
     if not w_alerts.empty:
         severes = []
         warnings = []
         alerts = []
-        st.markdown("### Weather warnings")
         for _, location in w_alerts.groupby("Location"):
             weather_alerts = write_alerts(location)
             severes += weather_alerts[0]
@@ -252,11 +251,13 @@ if __name__ == "__main__":
         for alert in alerts:
             st.markdown(
                 f"""<span style="background-color:rgb(255,205,0,0.2);color:#423d01;font-size:1.2em;border-radius:5px;padding:8px;">{alert}</span>""", unsafe_allow_html=True)
+    else:
+        st.markdown("""No weather alerts to show!""")
+    st.markdown("### Air quality warnings")
     if not air_alerts.empty:
         severes = []
         warnings = []
         alerts = []
-        st.markdown("### Air quality warnings")
         for _, location in air_alerts.groupby("Location"):
             air_quality_alerts = write_alerts(location)
             severes += air_quality_alerts[0]
@@ -271,3 +272,5 @@ if __name__ == "__main__":
         for alert in alerts:
             st.markdown(
                 f"""<span style="background-color:rgb(255,205,0,0.2);color:#423d01;font-size:1.2em;border-radius:5px;padding:8px;">{alert}</span>""", unsafe_allow_html=True)
+    else:
+        st.markdown("""No air quality alerts to show!""")

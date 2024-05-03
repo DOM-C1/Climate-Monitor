@@ -148,7 +148,6 @@ if __name__ == "__main__":
         forecast_d = get_location_forecast_data(connection)
         st.title('About the Data')
         locations = get_location_data(connection)
-        print(locations)
         w_map = uk_map(get_location_data(
             connection), ['location', 'county'])
         st.altair_chart(w_map, use_container_width=True)

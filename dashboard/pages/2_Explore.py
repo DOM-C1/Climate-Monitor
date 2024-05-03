@@ -106,7 +106,6 @@ def get_forecast_data(_conn) -> pd.DataFrame:
 
         rows = cur.fetchall()
         data_f = pd.DataFrame.from_dict(rows).drop_duplicates()
-        print(data_f)
     data_f["icon_data"] = data_f["Weather code"].apply(icon_data)
     return [d for _, d in data_f.groupby(['Weather code'])]
 
