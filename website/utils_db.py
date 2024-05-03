@@ -41,39 +41,41 @@ def get_id(table: str, column: str, value: str, conn: connection) -> int:
         return result[0][0] if result else ERROR_CODE
 
 
-def get_loc_id(longitude: float, latitude: float, conn: connection) -> int:
+def get_loc_id(location_name: str, conn: connection) -> int:
     """This function gets a location_id, assuming that a unique location is
        defined by its longitude and latitude. """
+
     query = """SELECT loc_id FROM location
-                WHERE longitude = %s AND latitude = %s
-                         """
-    values = (longitude, latitude)
+                WHERE loc_name = %s"""
+    values = (location_name,)
     with conn.cursor() as cur:
         cur.execute(query, values)
         result = cur.fetchone()
     return result[0] if result else ERROR_CODE
 
 
-def setup_user_location(details, name, email, sub_newsletter, sub_alerts, password, conn) -> str:
+def setup_user_location(details, name, email, sub_newsletter, sub_alerts, conn) -> str:
     """This sets up location tracking for a user, if the user exists then it just adds a new
        location, otherwise, it sets up the new user too."""
     longitude, latitude = get_postcode_long_lat(details)
     location_name, county, country = get_location_names(longitude, latitude)
     longitude, latitude = get_standard_long_lat(location_name)
     country_id = get_id('country', 'name', country, conn)
+    if country_id == ERROR_CODE:
+        return render_template('page_not_found.html')
 
     county_id = get_id('county', 'name', county, conn)
+
     if county_id == ERROR_CODE:
         county_data = {'name': county, 'country_id': country_id}
         add_to_database('county', county_data, conn)
         county_id = get_id('county', 'name', county, conn)
-
-    user_data = {'email': email, 'name': name, 'password': password}
+    user_data = {'email': email, 'name': name}
     user_id = get_id('user_details', 'email', email, conn)
+
     if user_id == ERROR_CODE:
         add_to_database('user_details', user_data, conn)
         user_id = get_id('user_details', 'email', email, conn)
-
     loc_id = get_loc_id(longitude, latitude, conn)
     if loc_id == ERROR_CODE:
         location_data = {'loc_name': location_name,

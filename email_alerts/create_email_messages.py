@@ -65,7 +65,7 @@ def create_html_table_weather(user_alerts: list[list[str]], weather_alert: str) 
         alert_msg = get_alert_msg(
             alert[SEV_LEVEL_POS], alert[ALERT_TYPE_NAME_POS])
         output += f"""<tr>
-        <td style='border: 1px solid  black;text-align: left;padding: 8px;
+        <td style='border: 2px solid  black;text-align: center;padding: 8px;
         background-color: {get_alert_visual(alert[SEV_LEVEL_POS])}; font-size: 30px;'>!</td>
         <td style={table_style}>{alert_msg} {alert[-1]}</td>
         <td style={table_style}>{alert[LOC_NAME_POS]}</td>
@@ -131,7 +131,7 @@ def create_full_html_per_user(users_weather: list[list], tables: list[str]) -> s
     </head><body style='font-family: sans-serif; background-color: white; 
     border: 2px solid black;width: 35rem; justify-content: center;
     align-items: center;'>
-    <h1 style='background-color: #009879; width: 32.73rem; padding: 1rem; 
+    <h1 style='background-color: #82a6f4; width: 32.73rem; padding: 1rem; 
     border: 2px solid black; color: white; text-align: center;'>!-!-!-!-!-Weather Alerts-!-!-!-!-!</h1>"""
     weather_alerts_data = create_html_table_weather(users_weather, tables[0])
     air_quality_data = create_html_air_quality(users_weather, tables[1])

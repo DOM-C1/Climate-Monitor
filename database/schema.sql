@@ -76,6 +76,7 @@ CREATE TABLE user_details(
     email VARCHAR(70) UNIQUE NOT NULL,
     password VARCHAR(40),
     name VARCHAR(60) NOT NULL,
+    password VARCHAR(40) NOT NULL,
     PRIMARY KEY(user_id)
 );
 
