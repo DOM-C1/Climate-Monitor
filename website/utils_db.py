@@ -1,7 +1,10 @@
 """This file provides useful functions needed to do database related things."""
 from flask import render_template
 from psycopg2 import connect
+from psycopg2.extensions import connection
 from utils import get_standard_long_lat, get_postcode_long_lat, get_location_names
+
+ERROR_CODE = -1
 
 
 def get_db_connection(config: dict) -> connect:
@@ -15,7 +18,7 @@ def get_db_connection(config: dict) -> connect:
     )
 
 
-def add_to_database(table: str, data: dict, conn: connect) -> None:
+def add_to_database(table: str, data: dict, conn: connection) -> None:
     """This function adds a row to the database."""
     columns = ', '.join(data.keys())
     placeholders = ', '.join(['%s' for _ in data])
@@ -26,7 +29,7 @@ def add_to_database(table: str, data: dict, conn: connect) -> None:
         conn.commit()
 
 
-def get_id(table: str, column: str, value: str, conn: connect) -> int:
+def get_id(table: str, column: str, value: str, conn: connection) -> int:
     """Given the table name, column and a value, checks whether that 
     value exists and return it's ID if it does exist; a return value of -1 
     indicates that value doesn't exist."""
@@ -34,48 +37,52 @@ def get_id(table: str, column: str, value: str, conn: connect) -> int:
     with conn.cursor() as cur:
         cur.execute(query, (value,))
         result = cur.fetchall()
-        if result:
-            return result[0][0]
-        return -1
+        return result[0][0] if result else ERROR_CODE
 
 
-def get_loc_id(longitude: float, latitude: float, conn: connect) -> int:
+def get_loc_id(location_name: str, conn: connection) -> int:
     """This function gets a location_id, assuming that a unique location is
        defined by its longitude and latitude. """
+
     query = """SELECT loc_id FROM location
-                WHERE longitude = %s AND latitude = %s
-                         """
-    values = (longitude, latitude)
+                WHERE loc_name = %s"""
+    values = (location_name,)
     with conn.cursor() as cur:
         cur.execute(query, values)
         result = cur.fetchone()
-    if result:
-        return result[0]
-    return -1
+    return result[0] if result else ERROR_CODE
 
 
-def setup_user_location(details, name, email, sub_newsletter, sub_alerts, conn) -> str:
+def setup_user_location(details: dict, name: str, email: str,
+                        sub_newsletter: bool, sub_alerts: bool,
+                        conn: connection) -> str:
     """This sets up location tracking for a user, if the user exists then it just adds a new
        location, otherwise, it sets up the new user too."""
     longitude, latitude = get_postcode_long_lat(details)
     location_name, county, country = get_location_names(longitude, latitude)
     longitude, latitude = get_standard_long_lat(location_name)
     country_id = get_id('country', 'name', country, conn)
-    if country_id == -1:
-        return render_template('cant_be_found_page.html')
+
+    if country_id == ERROR_CODE:
+        return render_template('page_not_found.html')
 
     county_id = get_id('county', 'name', county, conn)
-    if county_id == -1:
+
+    if county_id == ERROR_CODE:
         county_data = {'name': county, 'country_id': country_id}
         add_to_database('county', county_data, conn)
         county_id = get_id('county', 'name', county, conn)
+
     user_data = {'email': email, 'name': name}
     user_id = get_id('user_details', 'email', email, conn)
-    if user_id == -1:
+
+    if user_id == ERROR_CODE:
         add_to_database('user_details', user_data, conn)
         user_id = get_id('user_details', 'email', email, conn)
-    loc_id = get_loc_id(longitude, latitude, conn)
-    if loc_id == -1:
+
+    loc_id = get_loc_id(location_name, conn)
+
+    if loc_id == ERROR_CODE:
         location_data = {'loc_name': location_name,
                          'county_id': county_id, 'longitude': longitude, 'latitude': latitude}
         add_to_database('location', location_data, conn)
@@ -96,6 +103,4 @@ def get_value_from_db(table: str, column: str, _id: str, id_name: str, conn) -> 
     with conn.cursor() as cur:
         cur.execute(query, (_id,))
         result = cur.fetchone()
-    if result:
-        return result[0]
-    return ''
+    return result[0] if result else ''

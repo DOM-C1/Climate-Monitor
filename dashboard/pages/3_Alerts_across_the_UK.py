@@ -204,9 +204,6 @@ def write_alerts(w_alerts: pd.DataFrame):
     return severes, warnings, alerts
 
 
-...
-
-
 if __name__ == "__main__":
     load_dotenv()
     st.title("Weather alerts across the UK")

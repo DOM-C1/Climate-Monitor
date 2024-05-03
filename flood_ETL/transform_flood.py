@@ -10,9 +10,9 @@ from extract_flood import get_flood_warning_json
 
 def get_lat_lon(county: str) -> tuple[float]:
     """Get the latitude and longitude from a county."""
-    geolocator = Nominatim(user_agent="my_application")
+    geolocator = Nominatim(user_agent="my_application", timeout=10)
     location = geolocator.geocode(county)
-    return round(location.latitude, 7), round(location.longitude, 7)
+    return round(float(location.latitude), 7), round(float(location.longitude), 7)
 
 
 def convert_dtypes(data: pd.DataFrame) -> pd.DataFrame:

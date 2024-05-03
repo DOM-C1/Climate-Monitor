@@ -52,5 +52,6 @@ def handler(event: dict = None, context: dict = None) -> dict[list[list[dict]]]:
     load_dotenv()
     conn = get_db_connection(ENV)
     locations = query_locations(conn)
+    conn.close()
 
     return {"data": chunk_locations(locations)}
