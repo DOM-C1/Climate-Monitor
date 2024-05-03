@@ -12,6 +12,32 @@ Climate Monitor aims to solve the problem of accessing disparate sources for cli
 
 No more scrambling between disparate sources for weather updates. Climate Monitor consolidates temperature forecasts, rainfall patterns, flood warnings, and air quality metrics into one user-friendly interface, offering real-time notifications when weather conditions veer into dangerous territory.
 
+
+## Installation
+
+### Cloud Services
+
+To create the cloud services infrastructure, run `bash create_infrastructure.sh` within the `terraform/` folder. It will need a `.tfvars` file with the following variables:
+- `AWS_KEY`
+- `AWS_SKEY`
+- `DB_PORT`
+- `DB_USER`
+- `DB_PASSWORD`
+- `DB_NAME`
+- `SENDER_EMAIL`
+- `REGION`
+- `WEATHER_WARNING_TABLE`
+- `FLOOD_WARNING_TABLE`
+- `AIR_QUALITY_TABLE`
+
+A separate `.env` file is also needed for installation and the creation of the cloud infrastructure. The variables should match the corresponding variables in the `.tfvars` file. The following variables are needed:
+- `DB_PORT`
+- `DB_USER`
+- `DB_PASSWORD`
+- `DB_NAME`
+
+
+
 ## Data Sources
 
 - **UK Environment Agency APIs**: For flood monitoring and water quality feeds.
