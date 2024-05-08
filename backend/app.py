@@ -3,7 +3,6 @@ from os import environ as ENV
 
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
-import pandas as pd
 from utils import get_details_from_post_code
 from utils_db import get_db_connection, get_id, setup_user_location, get_value_from_db, \
     check_row_exists, get_locations_for_user, update_loc_assignment, delete_user
@@ -61,8 +60,8 @@ def get_details():
                 return jsonify({'message': 'No data found for the provided email'}), 404
             df_json = df.to_json(orient='records')
             return jsonify({'message': 'success', 'df': df_json}), 200
-        else:
-            return jsonify({'message': 'No data found for those credentials'}), 404
+
+        return jsonify({'message': 'No data found for those credentials'}), 404
 
     except Exception as e:
         return jsonify({'error': f"An error occurred: {str(e)}"}), 500
@@ -79,14 +78,14 @@ def update_notifs():
 
     conn = get_db_connection(ENV)
     if check_row_exists(conn, 'user_details', 'email', email, 'password', password):
-        for dict in alerts:
-            _id = dict['id']
-            value = dict['value']
+        for dic in alerts:
+            _id = dic['id']
+            value = dic['value']
             update_loc_assignment(
                 conn, 'user_location_id ', _id, 'alert_opt_in', value)
-        for dict in reports:
-            _id = dict['id']
-            value = dict['value']
+        for dic in reports:
+            _id = dic['id']
+            value = dic['value']
             update_loc_assignment(
                 conn, 'user_location_id ', _id, 'report_opt_in', value)
 

@@ -1,5 +1,4 @@
 """This file provides useful functions needed to do database related things."""
-from flask import render_template
 from psycopg2 import connect
 from psycopg2.extensions import connection
 from utils import get_standard_long_lat, get_postcode_long_lat, get_location_names
@@ -8,7 +7,7 @@ import pandas as pd
 ERROR_CODE = -1
 
 
-def get_db_connection(config: dict) -> connect:
+def get_db_connection(config: dict) -> connection:
     """Connect to the database."""
     return connect(
         user=config["DB_USER"],
@@ -28,6 +27,7 @@ def add_to_database(table: str, data: dict, conn: connection) -> None:
     with conn.cursor() as cur:
         cur.execute(query, values)
     conn.commit()
+    return None
 
 
 def get_id(table: str, column: str, value: str, conn: connection) -> int:
@@ -54,16 +54,13 @@ def get_loc_id(latitude: float, longitude: float, conn: connection) -> int:
     return result[0] if result else ERROR_CODE
 
 
-def setup_user_location(details, name, email, sub_newsletter, sub_alerts, password, conn) -> str:
+def setup_user_location(details, name, email, sub_newsletter, sub_alerts, password, conn) -> None:
     """This sets up location tracking for a user, if the user exists then it just adds a new
        location, otherwise, it sets up the new user too."""
     longitude, latitude = get_postcode_long_lat(details)
     location_name, county, country = get_location_names(longitude, latitude)
     longitude, latitude = get_standard_long_lat(location_name)
     country_id = get_id('country', 'name', country, conn)
-
-    if country_id == ERROR_CODE:
-        return render_template('page_not_found.html')
     county_id = get_id('county', 'name', county, conn)
 
     if county_id == ERROR_CODE:
@@ -90,7 +87,7 @@ def setup_user_location(details, name, email, sub_newsletter, sub_alerts, passwo
                     user_loc_data, conn)
 
     conn.close()
-    return ''
+    return None
 
 
 def get_value_from_db(table: str, column: str, _id: str, id_name: str, conn) -> str:
@@ -103,7 +100,7 @@ def get_value_from_db(table: str, column: str, _id: str, id_name: str, conn) -> 
     return result[0] if result else ''
 
 
-def check_row_exists(conn, table_name, column1, value1, column2, value2) -> bool:
+def check_row_exists(conn: connection, table_name: str, column1: str, value1: str, column2: str, value2: str) -> bool:
     """
     Check if a row exists in the database that satisfies the conditions for two columns."""
     query = f"""
@@ -117,7 +114,7 @@ def check_row_exists(conn, table_name, column1, value1, column2, value2) -> bool
 
         cur.execute(query, (value1, value2))
         exists = cur.fetchone()[0]
-    return True if exists else False
+    return bool(exists)
 
 
 def query_to_df(conn: connection, query: str) -> pd.DataFrame:
@@ -131,6 +128,7 @@ def query_to_df(conn: connection, query: str) -> pd.DataFrame:
 
 
 def get_locations_for_user(conn: connection, email: str) -> pd.DataFrame:
+    """This gets the locations associated with a particular user."""
     user_details_query = """
         SELECT *
         FROM user_details AS UD
@@ -144,8 +142,8 @@ def get_locations_for_user(conn: connection, email: str) -> pd.DataFrame:
 
 
 def update_loc_assignment(conn: connection, _id_name: str, _id: int, column: str, value: str) -> None:
-    """ Updates user location assignment so that if a user updates their details 
-        it gets updated through this."""
+    """If a user wants to update alerts and report settings for a particular location
+       it is done through this function."""
     query = f"""
     UPDATE user_location_assignment
     SET {column} = %s
@@ -158,10 +156,11 @@ def update_loc_assignment(conn: connection, _id_name: str, _id: int, column: str
     return None
 
 
-def delete_user(conn, _id):
+def delete_user(conn: connection, _id: int) -> None:
     """Deletes a users records."""
     with conn.cursor() as cur:
         cur.execute(
             "DELETE FROM user_location_assignment WHERE user_id = %s;", (_id,))
         cur.execute("DELETE FROM user_details WHERE user_id = %s;", (_id,))
         conn.commit()
+        return None
