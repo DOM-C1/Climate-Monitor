@@ -19,7 +19,7 @@ resource "aws_ecs_task_definition" "dashboard-task-definition" {
   container_definitions = jsonencode([
     {
       name         = "c10-climate-dashboard-ecr"
-      image        = aws_ecr_image.dashboard-image.image_uri
+      image        = data.aws_ecr_image.dashboard-image.image_uri
       cpu          = 0
       essential    = true
       portMappings = [

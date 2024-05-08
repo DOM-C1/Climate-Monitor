@@ -19,7 +19,7 @@ resource "aws_ecs_task_definition" "backend-task-definition" {
   container_definitions = jsonencode([
     {
       name         = "c10-climate-backend-ecr"
-      image        = aws_ecr_image.backend-image.image_uri
+      image        = data.aws_ecr_image.backend-image.image_uri
       cpu          = 0
       essential    = true
       portMappings = [
