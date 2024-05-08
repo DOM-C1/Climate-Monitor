@@ -101,15 +101,13 @@ def get_value_from_db(table: str, column: str, _id: str, id_name: str, conn) -> 
 
 
 def check_row_exists(conn: connection, table_name: str, column1: str, value1: str, column2: str, value2: str) -> bool:
-    """
-    Check if a row exists in the database that satisfies the conditions for two columns."""
+    """Check if a row exists in the database that satisfies the conditions for two columns."""
     query = f"""
     SELECT EXISTS (
         SELECT 1 FROM {table_name}
         WHERE {column1} = %s AND {column2} = %s
     );
     """
-
     with conn.cursor() as cur:
 
         cur.execute(query, (value1, value2))
