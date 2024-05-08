@@ -192,6 +192,7 @@ def get_air_qualities(_conn: connection):
                     ON (AQ.weather_report_id = WR.weather_report_id)
                     JOIN location AS L ON (WR.loc_id = L.loc_id)
                     WHERE L.loc_id < 11
+                    AND WR.report_time > NOW() - interval '1 day'
                     GROUP BY WR.report_time, AQ.o3_concentration, L.loc_name, L.loc_id, AQ.severity_level_id
                     ORDER BY report_time""")
         rows = cur.fetchall()
