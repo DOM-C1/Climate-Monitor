@@ -23,10 +23,9 @@ def intro() -> None:
         <b>Home</b> Quick search - get the coming forecast and find weather alerts by location!<br/>
         <b>Explore</b>: Explore the current climate across the UK.<br/>
         <b>Alerts across the UK</b>: Get the latest weather alerts, 
-        including floods and air quality warnings.<br/><br/>
-        <b>Want to sign up to daily newsletters, or receive notifications about weather alerts 
-        near you?</b><br/>
-        Then check out the <b>Sign Up</b> page!<br/><br/><br/></span>""", unsafe_allow_html=True)
+        including floods and air quality warnings.<br/>
+        <b>Sign Up</b>: Want to sign up to daily newsletters, or receive notifications about weather alerts 
+        near you? Then sign up here!<br/><br/></span>""", unsafe_allow_html=True)
     st.markdown("""<span style="font-size:1.3em;">
         <b> Contributors </b><br/>
         Project manager: <b>Dom Chambers</b><br/>
