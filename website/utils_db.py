@@ -41,47 +41,48 @@ def get_id(table: str, column: str, value: str, conn: connection) -> int:
         return result[0][0] if result else ERROR_CODE
 
 
-def get_loc_id(location_name: str, conn: connection) -> int:
+def get_loc_id(latitude: float, longitude: float, conn: connection) -> int:
     """This function gets a location_id, assuming that a unique location is
        defined by its longitude and latitude. """
 
     query = """SELECT loc_id FROM location
-                WHERE loc_name = %s"""
-    values = (location_name,)
+                WHERE latitude = %s AND longitude = %s"""
+    values = (latitude, longitude,)
     with conn.cursor() as cur:
         cur.execute(query, values)
         result = cur.fetchone()
     return result[0] if result else ERROR_CODE
 
 
-def setup_user_location(details, name, email, sub_newsletter, sub_alerts, conn) -> str:
+def setup_user_location(details, name, email, sub_newsletter, sub_alerts, password, conn) -> str:
     """This sets up location tracking for a user, if the user exists then it just adds a new
        location, otherwise, it sets up the new user too."""
     longitude, latitude = get_postcode_long_lat(details)
     location_name, county, country = get_location_names(longitude, latitude)
     longitude, latitude = get_standard_long_lat(location_name)
     country_id = get_id('country', 'name', country, conn)
+
     if country_id == ERROR_CODE:
         return render_template('page_not_found.html')
-
     county_id = get_id('county', 'name', county, conn)
 
     if county_id == ERROR_CODE:
         county_data = {'name': county, 'country_id': country_id}
         add_to_database('county', county_data, conn)
         county_id = get_id('county', 'name', county, conn)
-    user_data = {'email': email, 'name': name}
     user_id = get_id('user_details', 'email', email, conn)
 
     if user_id == ERROR_CODE:
+        user_data = {'email': email, 'name': name, 'password': password}
         add_to_database('user_details', user_data, conn)
         user_id = get_id('user_details', 'email', email, conn)
-    loc_id = get_loc_id(longitude, latitude, conn)
+    loc_id = get_loc_id(latitude, longitude, conn)
+
     if loc_id == ERROR_CODE:
         location_data = {'loc_name': location_name,
                          'county_id': county_id, 'longitude': longitude, 'latitude': latitude}
         add_to_database('location', location_data, conn)
-        loc_id = get_loc_id(longitude, latitude, conn)
+        loc_id = get_loc_id(latitude, longitude, conn)
 
     user_loc_data = {'user_id': user_id, 'loc_id': loc_id,
                      'report_opt_in': sub_newsletter, 'alert_opt_in': sub_alerts}
@@ -134,11 +135,12 @@ def get_locations_for_user(conn: connection, email: str) -> pd.DataFrame:
         SELECT *
         FROM user_details AS UD
         JOIN user_location_assignment ON UD.user_id = user_location_assignment.user_id
-        JOIN location ON user_location_assignment.loc_id = location.loc_id
-        JOIN weather_report ON location.loc_id = weather_report.loc_id
+        JOIN location ON user_location_assignment.loc_id = location.loc_id;
     """
     user_details = query_to_df(conn, user_details_query)
-    return user_details[['email'] == email]
+    user_details = user_details.loc[:,
+                                    ~user_details.columns.duplicated()]
+    return user_details[user_details['email'] == email]
 
 
 def update_loc_assignment(conn: connection, _id_name: str, _id: int, column: str, value: str) -> None:

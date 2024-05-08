@@ -5,11 +5,17 @@ from os import environ as ENV
 from dotenv import load_dotenv
 import pandas as pd
 load_dotenv()
-DETAILS_URL = "http://18.170.61.182:5000/get_details"
-LOGIN_URL = "http://18.170.61.182:5000/login"
-USER_URL = "http://18.170.61.182:5000/submit-user"
-LOC_URL = "http://18.170.61.182:5000/update_notifs"
-DEL_URL = "http://18.170.61.182:5000/delete_user"
+# DETAILS_URL = "http://18.170.61.1 82:5000/get_details"
+# LOGIN_URL = "http://18.170.61.18 2:5000/login"
+# USER_URL = "http://18.170.61.18 2:5000/submit-user"
+# LOC_URL = "http://18.170.61.18 2:5000/update_notifs"
+# DEL_URL = "http://18.170.61.18 2:5000/delete_user"
+
+DETAILS_URL = "http://192.168.1.193:5000/get_details"
+LOGIN_URL = "http://192.168.1.193:5000/login"
+USER_URL = "http://192.168.1.193:5000/submit-user"
+LOC_URL = "http://192.168.1.193:5000/update_notifs"
+DEL_URL = "http://192.168.1.193:5000/delete_user"
 HEADERS = {'Content-Type': 'application/json'}
 
 st.title('Here you can find all things user located!')
@@ -109,7 +115,7 @@ if st.session_state.get('is_logged_in'):
     if response.status_code == 200:
         df = response.json().get('df')
         df = pd.read_json(df, orient='records')
-
+        print(df['loc_name'])
         for location in df['loc_name'].unique():
             location_data = df[df['loc_name'] == location]
             default_alert = location_data['alert_opt_in'].unique()[0]
@@ -185,7 +191,7 @@ if st.session_state.get('is_logged_in'):
                 st.session_state['is_logged_in'] = False
                 st.session_state['email'] = None
                 st.session_state['hash_password'] = None
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error('Error: Unable to delete user')
 else:
