@@ -5,11 +5,13 @@ from os import environ as ENV
 from dotenv import load_dotenv
 import pandas as pd
 load_dotenv()
-DETAILS_URL = "http://18.170.61.182:5000/get_details"
-LOGIN_URL = "http://18.170.61.182:5000/login"
-USER_URL = "http://18.170.61.182:5000/submit-user"
-LOC_URL = "http://18.170.61.182:5000/update_notifs"
-DEL_URL = "http://18.170.61.182:5000/delete_user"
+
+
+DETAILS_URL = "http://3.10.176.50:5000/get_details"
+LOGIN_URL = "http://3.10.176.50:5000/login"
+USER_URL = "http://3.10.176.50:5000/submit-user"
+LOC_URL = "http://3.10.176.50:5000/update_notifs"
+DEL_URL = "http://3.10.176.50:5000/delete_user"
 HEADERS = {'Content-Type': 'application/json'}
 
 st.title('Here you can find all things user located!')
@@ -109,7 +111,6 @@ if st.session_state.get('is_logged_in'):
     if response.status_code == 200:
         df = response.json().get('df')
         df = pd.read_json(df, orient='records')
-
         for location in df['loc_name'].unique():
             location_data = df[df['loc_name'] == location]
             default_alert = location_data['alert_opt_in'].unique()[0]
@@ -129,26 +130,26 @@ if st.session_state.get('is_logged_in'):
             alerts = cols[1].checkbox(
                 'Sign-up for alerts', key=alert_key)
             reports = cols[2].checkbox(
-                'Sign-up for reports', key=report_key)
+                'Sign-up for daily newsletter', key=report_key)
 
         if st.button('Submit Changes'):
             changes = {'alerts': [], 'reports': [
             ], 'email': st.session_state['email'], 'password': st.session_state['hash_password']}
             for location in df['loc_name'].unique():
                 location_data = df[df['loc_name'] == location]
-                id = location_data['user_location_id'].tolist()[0]
+                _id = location_data['user_location_id'].tolist()[0]
                 alert_value = st.session_state.get(f"alerts_{location}")
-                report_value = st.session_state.get(f"reports_{location}")
+                report_value = st.session_state.get(
+                    f"daily newsletter_{location}")
                 if alert_value:
-                    changes['alerts'].append({'id': id, 'value': alert_value})
+                    changes['alerts'].append({'id': _id, 'value': alert_value})
                 if report_value:
                     changes['reports'].append(
-                        {'id': id, 'value': report_value})
+                        {'id': _id, 'value': report_value})
             response = requests.post(
                 LOC_URL, json=changes, headers=HEADERS)
             if response.status_code == 200:
-                st.success('Details added successfully.')
-                st.rerun()
+                st.success('Details changed successfully.')
 
             else:
                 st.error('Error')
@@ -185,7 +186,7 @@ if st.session_state.get('is_logged_in'):
                 st.session_state['is_logged_in'] = False
                 st.session_state['email'] = None
                 st.session_state['hash_password'] = None
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error('Error: Unable to delete user')
 else:
