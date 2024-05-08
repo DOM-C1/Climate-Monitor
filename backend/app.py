@@ -7,6 +7,10 @@ from utils import get_details_from_post_code
 from utils_db import get_db_connection, get_id, setup_user_location, get_value_from_db, \
     check_row_exists, get_locations_for_user, update_loc_assignment, delete_user
 
+SUCCESS_CODE = 200
+USER_ERROR_CODE = 400
+NOT_FOUND_CODE = 404
+SERVER_ERROR_CODE = 500
 app = Flask(__name__)
 
 
@@ -19,12 +23,12 @@ def login_user():
     email = data['email'].lower()
     password = data['password']
     if not check_row_exists(conn, 'user_details', 'email', email, 'password', password):
-        return jsonify({'error': 'Invalid credentials'}), 400
+        return jsonify({'error': 'Invalid credentials'}), USER_ERROR_CODE
 
     _id = get_id('user_details', 'email', email, conn)
     name = get_value_from_db('user_details', 'name', _id, 'user_id', conn)
     conn.close()
-    return jsonify({'message': 'Login Successful', 'name': name}), 200
+    return jsonify({'message': 'Login Successful', 'name': name}), SUCCESS_CODE
 
 
 @app.route('/submit-user', methods=['POST'])
@@ -42,7 +46,7 @@ def submit_location():
     conn = get_db_connection(ENV)
     setup_user_location(details, name, email,
                         sub_newsletter, sub_alerts, password, conn)
-    return jsonify({'message': 'User location added successfully'}), 200
+    return jsonify({'message': 'User location added successfully'}), SUCCESS_CODE
 
 
 @app.route('/get_details', methods=['POST'])
@@ -57,14 +61,14 @@ def get_details():
         if check_row_exists(conn, 'user_details', 'email', email, 'password', password):
 
             if df.empty:
-                return jsonify({'message': 'No data found for the provided email'}), 404
+                return jsonify({'message': 'No data found for the provided email'}), NOT_FOUND_CODE
             df_json = df.to_json(orient='records')
-            return jsonify({'message': 'success', 'df': df_json}), 200
+            return jsonify({'message': 'success', 'df': df_json}), SUCCESS_CODE
 
-        return jsonify({'message': 'No data found for those credentials'}), 404
+        return jsonify({'message': 'No data found for those credentials'}), NOT_FOUND_CODE
 
     except Exception as e:
-        return jsonify({'error': f"An error occurred: {str(e)}"}), 500
+        return jsonify({'error': f"An error occurred: {str(e)}"}), SERVER_ERROR_CODE
 
 
 @app.route('/update_notifs', methods=['POST'])
@@ -89,9 +93,9 @@ def update_notifs():
             update_loc_assignment(
                 conn, 'user_location_id ', _id, 'report_opt_in', value)
 
-        return jsonify({'message': 'success'}), 200
+        return jsonify({'message': 'success'}), SUCCESS_CODE
 
-    return jsonify({'message': 'No data found for those credentials'}), 404
+    return jsonify({'message': 'No data found for those credentials'}), NOT_FOUND_CODE
 
 
 @app.route('/delete_user', methods=['POST'])
@@ -104,8 +108,8 @@ def del_user():
     if check_row_exists(conn, 'user_details', 'email', email, 'password', password):
         _id = get_id('user_details', 'email', email, conn)
         delete_user(conn, _id)
-        return jsonify({'message': 'success'}), 200
-    return jsonify({'message': 'Error deleting user'}), 500
+        return jsonify({'message': 'success'}), SUCCESS_CODE
+    return jsonify({'message': 'Error deleting user'}), SERVER_ERROR_CODE
 
 
 if __name__ == '__main__':
