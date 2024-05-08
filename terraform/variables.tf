@@ -6,12 +6,8 @@ variable "AWS_SKEY" {
     type = string
 }
 
-variable "DB_HOST" {
-    type = string
-}
-
 variable "DB_PORT" {
-    type = number
+    type = string
 }
 
 variable "DB_USER" {
@@ -47,5 +43,9 @@ variable "SENDER_EMAIL" {
 }
 
 variable "WEATHER_WARNING_TABLE" {
+    type = string
+}
+
+variable "HASH_KEY" {
     type = string
 }

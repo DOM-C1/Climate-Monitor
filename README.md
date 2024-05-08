@@ -36,7 +36,7 @@ A separate `.env` file is also needed for installation and the creation of the c
 - `DB_PASSWORD`
 - `DB_NAME`
 
-
+The links and arns needed to access the services will then be readily available on the AWS website. They will be needed for the `.env` for the rest of the project.
 
 ## Data Sources
 
@@ -73,4 +73,12 @@ All tools chosen optimise for cost, complexity, and scalability.
 
 ## The architecture diagram
 
-![ERD](architecture-diagram.png)
+![Architecture](architecture-diagram.png)
+
+## Outputs
+
+### Report
+![Report](report.png)
+
+### Alert
+![Alerts](alert.png)
