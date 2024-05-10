@@ -1,17 +1,18 @@
+"""Create a streamlit page displaying weather and flood alerts across the UK."""
+
 from datetime import datetime
 from os import environ as ENV
 
-import altair as alt
+from dotenv import load_dotenv
 import pandas as pd
 from psycopg2 import connect
 from psycopg2.extras import RealDictCursor
-from dotenv import load_dotenv
+from psycopg2.extensions import connection
 import streamlit as st
-import pydeck as pdk
 
 
 @st.cache_resource
-def connect_to_db(config):
+def connect_to_db(config: dict) -> connection:
     """Returns a live database connection."""
     return connect(
         host=config["DB_HOST"],
@@ -23,16 +24,18 @@ def connect_to_db(config):
 
 
 def time_rounder(timestamp: datetime) -> datetime:
-    """Obtains the most recent 15 min time, or the most recent hour"""
-    return (timestamp.replace(second=0, microsecond=0, minute=(timestamp.minute // 15 * 15)))
+    """Obtains the most recent 15 min time."""
+    return timestamp.replace(second=0, microsecond=0,
+                             minute=timestamp.minute // 15 * 15)
 
 
-def get_locations_with_alerts(_conn):
-    """Get the loc_id and alert type if they exist in database"""
+def get_locations_with_alerts(_conn: connection) -> list[pd.DataFrame]:
+    """Get the weather alert information from the database"""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""SET timezone='Europe/London'""")
-        cur.execute(f"""SELECT AL.name as "Alert type", SL.severity_level as "Severity",
-                    L.loc_name as "Location", L.loc_id, MIN(F.forecast_timestamp) as min_time, MAX(F.forecast_timestamp) as max_time
+        cur.execute("""SELECT AL.name as "Alert type", SL.severity_level as "Severity",
+                    L.loc_name as "Location", MIN(F.forecast_timestamp) as min_time,
+                    MAX(F.forecast_timestamp) as max_time, L.loc_id
                     FROM weather_alert AS WA
                     JOIN forecast AS F ON (WA.forecast_id = F.forecast_id)
                     JOIN severity_level AS SL ON (WA.severity_level_id = SL.severity_level_id)
@@ -40,42 +43,55 @@ def get_locations_with_alerts(_conn):
                     JOIN weather_report AS WR ON (F.weather_report_id = WR.weather_report_id)
                     JOIN location AS L ON (WR.loc_id = L.loc_id)
                     WHERE SL.severity_level_id < 4
-
+                    AND F.forecast_timestamp > NOW()
                     GROUP BY L.loc_id, "Alert type", "Severity", SL.severity_level_id
                     ORDER BY SL.severity_level_id DESC, L.loc_id ASC
                     """)
 
         rows = cur.fetchall()
-        data_f = pd.DataFrame(rows)
-    return data_f
+        if rows:
+            data_f = pd.DataFrame.from_dict(
+                rows).drop_duplicates()
+
+            data_f = data_f.groupby(['Location'])
+            locations = []
+            for _, data_frame in data_f:
+                loc_dup_group = data_frame.groupby(['loc_id'])
+                locations.append([
+                    data_frame for _, data_frame in loc_dup_group][0].drop_duplicates())
+            return locations
+    return []
 
 
-def get_flood_alerts(_conn):
-    """Get all flood alerts for a specific location."""
+def get_flood_alerts(_conn: connection) -> pd.DataFrame:
+    """Get all flood alerts for all locations."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""SET timezone='Europe/London'""")
-        cur.execute(f"""SELECT SL.severity_level AS "Severity", C.name AS "County", FW.time_raised AS "Time raised"
-                        FROM flood_warnings AS FW
-                        JOIN severity_level AS SL ON (FW.severity_level_id = SL.severity_level_id)
-                        JOIN location AS L ON (FW.loc_id = L.loc_id)
-                        JOIN county AS C ON (L.county_id = C.county_id)
-                        WHERE SL.severity_level_id < 4
-                        AND FW.time_raised > NOW() - interval '12 hours'
-                        ORDER BY SL.severity_level_id ASC""")
+        cur.execute("""SELECT SL.severity_level AS "Severity", C.name AS "County",
+                    FW.time_raised AS "Time raised"
+                    FROM flood_warnings AS FW
+                    JOIN severity_level AS SL ON (FW.severity_level_id = SL.severity_level_id)
+                    JOIN location AS L ON (FW.loc_id = L.loc_id)
+                    JOIN county AS C ON (L.county_id = C.county_id)
+                    WHERE SL.severity_level_id < 4
+                    AND FW.time_raised > NOW() - interval '12 hours'
+                    ORDER BY SL.severity_level_id ASC""")
 
         rows = cur.fetchall()
+
+    if rows:
         data_f = pd.DataFrame(rows)
+        data_f.loc[:, "Time raised"] = data_f.loc[:,
+                                                  "Time raised"].apply(time_rounder)
+        return data_f.drop_duplicates().groupby(["County"])
+    return pd.DataFrame()
 
-    data_f["Time raised"] = data_f["Time raised"].apply(
-        lambda x: x.replace(second=0))
-    return data_f.drop_duplicates().groupby(["County"])
 
-
-def get_air_quality_alerts(_conn):
-    """Get all air quality alerts for a specific location."""
+def get_air_quality_alerts(_conn: connection) -> pd.DataFrame:
+    """Get all air quality alerts for all locations."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""SET timezone='Europe/London'""")
-        cur.execute(f"""SELECT SL.severity_level AS "Severity", L.loc_name as "Location", L.loc_id,
+        cur.execute("""SELECT SL.severity_level AS "Severity", L.loc_name as "Location", L.loc_id,
                     MIN(WR.report_time) as min_time, MAX(WR.report_time) as max_time
                     FROM air_quality AS AQ
                     JOIN weather_report as WR ON (WR.weather_report_id = AQ.weather_report_id)
@@ -88,19 +104,22 @@ def get_air_quality_alerts(_conn):
         rows = cur.fetchall()
     if rows:
         data_f = pd.DataFrame(rows).drop_duplicates()
-        data_f["Alert type"] = None
-        data_f['min_time'] = data_f['min_time'].apply(time_rounder)
-        data_f['max_time'] = data_f['max_time'].apply(time_rounder)
-        data_f = data_f[data_f['max_time'] >= time_rounder(datetime.now())]
-
+        data_f.loc[:, "Alert type"] = None
+        data_f.loc[:, 'min_time'] = data_f.loc[:,
+                                               'min_time'].apply(time_rounder)
+        data_f.loc[:, 'max_time'] = data_f.loc[:,
+                                               'max_time'].apply(time_rounder)
+        data_f = data_f.loc[data_f.loc[:, 'max_time']
+                            >= time_rounder(datetime.now()), :]
         for i in data_f.index:
-            data_f["Alert type"][i] = 'Air Quality'
+            data_f.loc[:, "Alert type"][i] = 'Air Quality'
         return data_f.drop_duplicates()
 
     return pd.DataFrame()
 
 
-def format_time_list(times):
+def format_time_list(times: list) -> str:
+    """Format times for appropiate time ranges in markdown."""
     if len(times) == 1:
         return '**' + str(times[0]) + '**'
     time_str = ''
@@ -112,21 +131,22 @@ def format_time_list(times):
     return time_str
 
 
-def write_floods(floods: pd.DataFrame) -> tuple[list[tuple[str]]]:
-    """Write streamlit warnings for flood alerts."""
+def write_floods(flood_alerts: pd.DataFrame) -> tuple[list[tuple[str]]]:
+    """Create and format warnings for flood alerts."""
     severes = []
     warnings = []
     alerts = []
-    county = floods["County"].values[0]
-    floods["Dates"] = floods["Time raised"].dt.date.values
-    floods = floods.groupby(["Severity"])
-    for _, flood_s in floods:
+    county = flood_alerts.loc[:, "County"].values[0]
+    flood_alerts.loc[:, "Dates"] = flood_alerts.loc[:,
+                                                    "Time raised"].dt.date.values
+    flood_alerts = flood_alerts.groupby(["Severity"])
+    for _, flood_s in flood_alerts:
         flood_d = flood_s.groupby(["Dates"])
         for _, flood in flood_d:
-            times = flood["Time raised"].dt.time.values
+            times = flood.loc[:, "Time raised"].dt.time.values
             times = format_time_list(times)
-            severity = flood["Severity"].unique()[0]
-            date_val = flood["Dates"].values[0]
+            severity = flood.loc[:, "Severity"].unique()[0]
+            date_val = flood.loc[:, "Dates"].values[0]
             if date_val == datetime.today().date():
                 date_val = '**Today**'
             else:
@@ -143,63 +163,62 @@ def write_floods(floods: pd.DataFrame) -> tuple[list[tuple[str]]]:
     return severes, warnings, alerts
 
 
-def write_alerts(w_alerts: pd.DataFrame):
-    print(w_alerts)
+def get_min_max_dates_times(w_alert: pd.Series) -> tuple[str]:
+    """Extract forecast dates and times from a weather alert."""
+    datetime_min = w_alert['min_time']
+    date_min = datetime_min.date()
+    time_min = datetime_min.time()
+    datetime_max = w_alert['max_time']
+    date_max = datetime_max.date()
+    time_max = datetime_max.time()
+    if date_min == datetime.today().date():
+        date_min = '**Today**'
+    if date_max == datetime.today().date():
+        date_max = '**Today**'
+    return time_min, time_max, date_min, date_max
+
+
+def write_alert(w_alert, location):
+    """Write strings for """
+    alert_type = w_alert["Alert type"]
+    time_min, time_max, date_min, date_max = get_min_max_dates_times(
+        w_alert)
+    if w_alert["Alert type"] == "Air Quality":
+        key_words = 'had an'
+    else:
+        key_words = 'has a'
+
+    if date_min != date_max:
+        return [f'**{location}** {key_words} **', alert_type, f'** raised from **{date_min}** at \
+                **{time_min}** to **{date_max}** at **{time_max}**.']
+    if time_min != time_max:
+        return [f'**{location}** {key_words} **', alert_type, f'** raised \
+                        **{date_min}** from **{time_min}** to **{time_max}**.']
+    return [f'**{location}** {key_words} **', alert_type, f'** raised \
+                        **{date_min}** at **{time_min}**.']
+
+
+def write_alerts(weather_alerts: pd.DataFrame) -> list[str]:
+    """Create weather alert strings for various severities at a specfic location."""
     severes = []
     warnings = []
     alerts = []
-    location = w_alerts["Location"].values[0]
-    w_alerts = w_alerts.groupby(["Alert type"])
-    for _, w_alert_a in w_alerts:
-        alert_type = w_alert_a["Alert type"].values[0]
+    location = weather_alerts.loc[:, "Location"].values[0]
+    weather_alerts = weather_alerts.groupby(["Severity"])
+    for _, w_alert_a in weather_alerts:
+        severity = w_alert_a.loc[:, "Severity"].values[0]
         for _, w_alert in w_alert_a.sort_values(['min_time']).iterrows():
-            severity = w_alert["Severity"]
-            datetime_min = w_alert['min_time']
-            date_min = datetime_min.date()
-            time_min = datetime_min.time()
-            datetime_max = w_alert['max_time']
-            date_max = datetime_max.date()
-            time_max = datetime_max.time()
-            if date_min == datetime.today().date():
-                date_min = '**Today**'
-            if date_max == datetime.today().date():
-                date_max = '**Today**'
-            if w_alert["Alert type"] == "Air Quality":
-                key_words = 'had an'
-            else:
-                key_words = 'has a'
-
-            if date_min != date_max:
-                if severity == "Severe Warning":
-                    severes.append(
-                        f'🚨 **{location}** {key_words} **Severe {alert_type} Warning** raised from **{date_min}** at **{time_min}** to **{date_max}** at **{time_max}**.')
-                elif severity == "Warning":
-                    warnings.append(
-                        f'⚠️ **{location}** {key_words} **{alert_type} Warning** raised from **{date_min}** at **{time_min}** to **{date_max}** at **{time_max}**.')
-                elif severity == "Alert":
-                    alerts.append(
-                        f'❗ **{location}** {key_words} **{alert_type} Alert** raised from **{date_min}** at **{time_min}** to **{date_max}** at **{time_max}**.')
-            else:
-                if time_min != time_max:
-                    if severity == "Severe Warning":
-                        severes.append(
-                            f'🚨 **{location}** {key_words} **Severe {alert_type} Warning** raised **{date_min}** from **{time_min}** to **{time_max}**.')
-                    elif severity == "Warning":
-                        warnings.append(
-                            f'⚠️ **{location}** {key_words} **{alert_type} Warning** raised **{date_min}** from **{time_min}** to **{time_max}**.')
-                    elif severity == "Alert":
-                        alerts.append(
-                            f'❗ **{location}** {key_words} **{alert_type} Alert** raised **{date_min}** from **{time_min}** to **{time_max}**.')
-                else:
-                    if severity == "Severe Warning":
-                        severes.append(
-                            f'🚨 **{location}** {key_words} **Severe {alert_type} Warning** raised **{date_min}** at **{time_min}**.')
-                    elif severity == "Warning":
-                        warnings.append(
-                            f'⚠️ **{location}** {key_words} **{alert_type} Warning** raised **{date_min}** at **{time_min}**.')
-                    elif severity == "Alert":
-                        alerts.append(
-                            f'❗ **{location}** {key_words} **{alert_type} Alert** raised **{date_min}** at **{time_min}**.')
+            first_line, alert_type, second_line = write_alert(
+                w_alert, location)
+            if severity == 'Severe Warning':
+                severes.append('🚨 ' + first_line + 'Severe ' +
+                               alert_type + ' Warning' + second_line)
+            if severity == 'Warning':
+                warnings.append('⚠️ ' + first_line +
+                                alert_type + ' Warning' + second_line)
+            if severity == 'Alert':
+                alerts.append('❗ ' + first_line + alert_type +
+                              ' Alert' + second_line)
     return severes, warnings, alerts
 
 
@@ -207,70 +226,88 @@ if __name__ == "__main__":
     load_dotenv()
     st.title("Weather alerts across the UK")
     conn = connect_to_db(dict(ENV))
-    w_alerts = get_locations_with_alerts(conn)
+    weather_alerts = get_locations_with_alerts(conn)
     air_alerts = get_air_quality_alerts(conn)
-    floods = get_flood_alerts(conn)
+    floods = [df for _, df in get_flood_alerts(conn)]
     st.markdown("### Flood warnings")
     if floods:
-        severes = []
-        warnings = []
-        alerts = []
-        for _, location in floods:
-            flood_alerts = write_floods(location)
-            severes += flood_alerts[0]
-            warnings += flood_alerts[1]
-            alerts += flood_alerts[2]
-        for severe in severes:
+        f_severes = []
+        f_warnings = []
+        f_alerts = []
+        for loc in floods:
+            flood_alert_lists = write_floods(loc)
+            f_severes += flood_alert_lists[0]
+            f_warnings += flood_alert_lists[1]
+            f_alerts += flood_alert_lists[2]
+        for severe in f_severes:
             st.markdown(
-                f"""<span style="background-color:rgb(128,0,128,0.2);color:	#5c005c;font-size:1.35em;border-radius:5px;padding:10px;">{severe}</span>""", unsafe_allow_html=True)
-        for warning in warnings:
+                f"""<span style="background-color:rgb(128,0,128,0.2);color:	#5c005c;
+                font-size:1.35em;border-radius:5px;padding:10px;">{severe}</span>""",
+                unsafe_allow_html=True)
+        for warning in f_warnings:
             st.markdown(
-                f"""<span style="background-color:rgb(240,128,128,0.2);color:#670000;font-size:1.35em;border-radius:5px;padding:10px;">{warning}</span>""", unsafe_allow_html=True)
+                f"""<span style="background-color:rgb(240,128,128,0.2);color:#670000;
+                font-size:1.35em;border-radius:5px;padding:10px;">{warning}</span>""",
+                unsafe_allow_html=True)
         with st.expander('Mild flood alerts'):
-            for alert in alerts:
+            for alert in f_alerts:
                 st.markdown(
-                    f"""<span style="background-color:rgb(255,205,0,0.2);color:#423d01;font-size:1.2em;border-radius:5px;padding:8px;">{alert}</span>""", unsafe_allow_html=True)
+                    f"""<span style="background-color:rgb(255,205,0,0.2);color:#423d01;
+                    font-size:1.2em;border-radius:5px;padding:8px;">{alert}</span>""",
+                    unsafe_allow_html=True)
     else:
         st.markdown("""No flood alerts to show!""")
     st.markdown("### Weather warnings")
-    if not w_alerts.empty:
-        severes = []
-        warnings = []
-        alerts = []
-        for _, location in w_alerts.groupby("Location"):
-            weather_alerts = write_alerts(location)
-            severes += weather_alerts[0]
-            warnings += weather_alerts[1]
-            alerts += weather_alerts[2]
-        for severe in severes:
+    if weather_alerts:
+        w_severes = []
+        w_warnings = []
+        w_alerts = []
+        for loc in weather_alerts:
+            weather_alert_list = write_alerts(loc)
+            w_severes += weather_alert_list[0]
+            w_warnings += weather_alert_list[1]
+            w_alerts += weather_alert_list[2]
+        for severe in w_severes:
             st.markdown(
-                f"""<span style="background-color:rgb(128,0,128,0.2);color:	#5c005c;font-size:1.35em;border-radius:5px;padding:10px;">{severe}</span>""", unsafe_allow_html=True)
-        for warning in warnings:
+                f"""<span style="background-color:rgb(128,0,128,0.2);color:	#5c005c;
+                font-size:1.35em;border-radius:5px;padding:10px;">{severe}</span>""",
+                unsafe_allow_html=True)
+        for warning in w_warnings:
             st.markdown(
-                f"""<span style="background-color:rgb(240,128,128,0.2);color:#670000;font-size:1.35em;border-radius:5px;padding:10px;">{warning}</span>""", unsafe_allow_html=True)
-        for alert in alerts:
+                f"""<span style="background-color:rgb(240,128,128,0.2);color:#670000;
+                font-size:1.35em;border-radius:5px;padding:10px;">{warning}</span>""",
+                unsafe_allow_html=True)
+        for alert in w_alerts:
             st.markdown(
-                f"""<span style="background-color:rgb(255,205,0,0.2);color:#423d01;font-size:1.2em;border-radius:5px;padding:8px;">{alert}</span>""", unsafe_allow_html=True)
+                f"""<span style="background-color:rgb(255,205,0,0.2);color:#423d01;
+                font-size:1.2em;border-radius:5px;padding:8px;">{alert}</span>""",
+                unsafe_allow_html=True)
     else:
         st.markdown("""No weather alerts to show!""")
     st.markdown("### Air quality warnings")
     if not air_alerts.empty:
-        severes = []
-        warnings = []
-        alerts = []
-        for _, location in air_alerts.groupby("Location"):
-            air_quality_alerts = write_alerts(location)
-            severes += air_quality_alerts[0]
-            warnings += air_quality_alerts[1]
-            alerts += air_quality_alerts[2]
-        for severe in severes:
+        a_severes = []
+        a_warnings = []
+        a_alerts = []
+        for _, loc in air_alerts.groupby("Location"):
+            air_quality_alerts = write_alerts(loc)
+            a_severes += air_quality_alerts[0]
+            a_warnings += air_quality_alerts[1]
+            a_alerts += air_quality_alerts[2]
+        for severe in a_severes:
             st.markdown(
-                f"""<span style="background-color:rgb(128,0,128,0.2);color:	#5c005c;font-size:1.35em;border-radius:5px;padding:10px;">{severe}</span>""", unsafe_allow_html=True)
-        for warning in warnings:
+                f"""<span style="background-color:rgb(128,0,128,0.2);color:	#5c005c;
+                font-size:1.35em;border-radius:5px;padding:10px;">{severe}</span>""",
+                unsafe_allow_html=True)
+        for warning in a_warnings:
             st.markdown(
-                f"""<span style="background-color:rgb(240,128,128,0.2);color:#670000;font-size:1.35em;border-radius:5px;padding:10px;">{warning}</span>""", unsafe_allow_html=True)
-        for alert in alerts:
+                f"""<span style="background-color:rgb(240,128,128,0.2);color:#670000;
+                font-size:1.35em;border-radius:5px;padding:10px;">{warning}</span>""",
+                unsafe_allow_html=True)
+        for alert in a_alerts:
             st.markdown(
-                f"""<span style="background-color:rgb(255,205,0,0.2);color:#423d01;font-size:1.2em;border-radius:5px;padding:8px;">{alert}</span>""", unsafe_allow_html=True)
+                f"""<span style="background-color:rgb(255,205,0,0.2);color:#423d01;
+                font-size:1.2em;border-radius:5px;padding:8px;">{alert}</span>""",
+                unsafe_allow_html=True)
     else:
         st.markdown("""No air quality alerts to show!""")

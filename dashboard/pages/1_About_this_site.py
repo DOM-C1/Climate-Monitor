@@ -1,18 +1,19 @@
-"""Create and host a streamlit dashboard"""
+"""Write some information for the user about this dashboard."""
 
-import pydeck as pdk
-from dotenv import load_dotenv
-from psycopg2.extras import RealDictCursor
-from psycopg2 import connect
-import pandas as pd
-import altair as alt
 from os import environ as ENV
+
+import altair as alt
+from dotenv import load_dotenv
+import pandas as pd
+from psycopg2 import connect
+from psycopg2.extras import RealDictCursor
+from psycopg2.extensions import connection
 import streamlit as st
 from vega_datasets import data
 
 
-def intro():
-
+def intro() -> None:
+    """Write some streamlit text about the dashboard."""
     st.write("# Welcome to the Climate Monitor! :sun_small_cloud:")
 
     st.markdown(
@@ -21,21 +22,22 @@ def intro():
         <b>👈 Select a page from the menu on the left</b> to explore the dashboard!<br/><br/>
         <b>Home</b> Quick search - get the coming forecast and find weather alerts by location!<br/>
         <b>Explore</b>: Explore the current climate across the UK.<br/>
-        <b>Alerts across the UK</b>: Get the latest weather alerts, including floods and air quality warnings.<br/><br/>
-        <b>Want to sign up to daily newsletters, or receive notifications about weather alerts near you?</b><br/>
-        Then check out the <b>Sign Up</b> page!<br/><br/><br/></span>""", unsafe_allow_html=True)
+        <b>Alerts across the UK</b>: Get the latest weather alerts, 
+        including floods and air quality warnings.<br/>
+        <b>Sign Up</b>: Want to sign up to daily newsletters, or receive notifications about weather alerts 
+        near you? Then sign up here!<br/><br/></span>""", unsafe_allow_html=True)
     st.markdown("""<span style="font-size:1.3em;">
-        <b> Contributors </b><br/>
-        Project manager: <b>Dom Chambers</b><br/>
-        Quality Assurance: <b>Arjun Babhania</b><br/>
-        Architect: <b>Nathan McKittrick</b><br/>
-        Architect: <b>Dana Weetman</b></span>
+        <b> Contributors: </b><br/>
+        Dom Chambers<br/>
+        Arjun Babhania<br/>
+        Nathan McKittrick<br/>
+        Dana Weetman</span>
     """, unsafe_allow_html=True
                 )
 
 
 @st.cache_resource
-def connect_to_db(config):
+def connect_to_db(config: dict) -> connection:
     """Returns a live database connection."""
     return connect(
         host=config["DB_HOST"],
@@ -47,7 +49,7 @@ def connect_to_db(config):
 
 
 @st.cache_data
-def get_data_from_db(_conn, table_name) -> pd.DataFrame:
+def get_data_from_db(_conn: connection, table_name: str) -> pd.DataFrame:
     """Returns data as DataFrame from database."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(f"SELECT * FROM {table_name};")
@@ -57,11 +59,12 @@ def get_data_from_db(_conn, table_name) -> pd.DataFrame:
 
 
 @st.cache_data
-def get_location_data(_conn) -> pd.DataFrame:
+def get_location_data(_conn: connection) -> pd.DataFrame:
     """Returns location data as DataFrame from database."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
 
-        cur.execute(f"""SELECT l.latitude, l.longitude, l.loc_name as Location, c.name as County, co.name as Country
+        cur.execute("""SELECT l.latitude, l.longitude, l.loc_name as Location,
+                    c.name as County, co.name as Country
                     FROM location AS l
                     JOIN county as c
                     ON (l.county_id=c.county_id)
@@ -79,11 +82,12 @@ def get_location_data(_conn) -> pd.DataFrame:
 
 
 @st.cache_data
-def get_location_forecast_data(_conn) -> pd.DataFrame:
+def get_location_forecast_data(_conn: connection) -> pd.DataFrame:
     """Returns location data as DataFrame from database."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
 
-        cur.execute(f"""SELECT l.latitude, l.longitude, l.loc_name as Location, c.name as County, co.name as Country,
+        cur.execute("""SELECT l.latitude, l.longitude, l.loc_name as Location, c.name as County,
+                    co.name as Country,
                     f.forecast_timestamp as forecast_time, wc.description as weather
                     FROM location AS l
                     JOIN county as c
@@ -105,7 +109,7 @@ def get_location_forecast_data(_conn) -> pd.DataFrame:
     return data_f
 
 
-def uk_map(loc_data, tooltips):
+def uk_map(loc_data: pd.DataFrame, tooltips: list[str]) -> alt.LayerChart:
     """Generates a uk map of where the locations."""
     # Load GeoJSON data
     countries = alt.topo_feature(data.world_110m.url, 'countries')
@@ -153,6 +157,8 @@ if __name__ == "__main__":
         st.altair_chart(w_map, use_container_width=True)
         st.markdown(
             f"""<span style="font-size: 1.3em">
-            This climate monitor is currently tracking {locations['location'].count()} locations across the UK.<br/>
-            If you want to add more locations, 👈 navigate to the <b>Sign Up</b> page!</span>""", unsafe_allow_html=True)
+            This climate monitor is currently tracking {locations['location'].count()} 
+            locations across the UK.<br/>
+            If you want to add more locations, 👈 navigate to the <b>Sign Up</b> 
+            page!</span>""", unsafe_allow_html=True)
     st.toast('Remember to sign up to become a user!')

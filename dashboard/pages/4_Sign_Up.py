@@ -1,3 +1,5 @@
+"""Allow the user to sign up, log in and make changes to their account."""
+
 import streamlit as st
 import requests
 from hashlib import blake2b

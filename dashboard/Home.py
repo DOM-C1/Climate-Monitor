@@ -4,26 +4,36 @@ from datetime import datetime
 from os import environ as ENV
 
 import altair as alt
-import pandas as pd
+from dotenv import load_dotenv
 import numpy as np
+import pandas as pd
 from psycopg2 import connect
 from psycopg2.extras import RealDictCursor
-from dotenv import load_dotenv
-import streamlit as st
+from psycopg2.extensions import connection
 import pydeck as pdk
+import streamlit as st
 
-SUN_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Weather-clear.svg/2048px-Weather-clear.svg.png"
-SUN_CLOUD_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Antu_com.librehat.yahooweather.svg/2048px-Antu_com.librehat.yahooweather.svg.png"
-CLOUD_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Antu_weather-many-clouds.svg/768px-Antu_weather-many-clouds.svg.png"
-FOG_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Breeze-weather-mist-48.svg/2048px-Breeze-weather-mist-48.svg.png"
-DRIZZLE_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Faenza-weather-showers-scattered-symbolic.svg/2048px-Faenza-weather-showers-scattered-symbolic.svg.png"
-RAIN_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Breeze-weather-showers-scattered-48.svg/2048px-Breeze-weather-showers-scattered-48.svg.png"
-FREEZE_RAIN_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Antu_weather-freezing-rain.svg/2048px-Antu_weather-freezing-rain.svg.png"
-SNOW_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Antu_weather-snow-scattered.svg/2048px-Antu_weather-snow-scattered.svg.png"
-THUNDER_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Antu_weather-storm-day.svg/2048px-Antu_weather-storm-day.svg.png"
+SUN_URL = """https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Weather-clear.svg/2048px-Weat
+her-clear.svg.png"""
+SUN_CLOUD_URL = """https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Antu_com.librehat.yahoo
+weather.svg/2048px-Antu_com.librehat.yahooweather.svg.png"""
+CLOUD_URL = """https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Antu_weather-many-clouds.sv
+g/768px-Antu_weather-many-clouds.svg.png"""
+FOG_URL = """https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Breeze-weather-mist-48.svg/20
+48px-Breeze-weather-mist-48.svg.png"""
+DRIZZLE_URL = """https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Faenza-weather-showers-sc
+attered-symbolic.svg/2048px-Faenza-weather-showers-scattered-symbolic.svg.png"""
+RAIN_URL = """https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Breeze-weather-showers-scatt
+ered-48.svg/2048px-Breeze-weather-showers-scattered-48.svg.png"""
+FREEZE_RAIN_URL = """https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Antu_weather-freezing
+-rain.svg/2048px-Antu_weather-freezing-rain.svg.png"""
+SNOW_URL = """https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Antu_weather-snow-scattered.
+svg/2048px-Antu_weather-snow-scattered.svg.png"""
+THUNDER_URL = """https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Antu_weather-storm-day.sv
+g/2048px-Antu_weather-storm-day.svg.png"""
 
 
-def icon_data(weather_code):
+def icon_data(weather_code: int) -> dict:
     """Get the relevant url data for a given weather code."""
     if weather_code in range(0, 2):
         url = SUN_URL
@@ -52,7 +62,7 @@ def icon_data(weather_code):
 
 
 @st.cache_resource
-def connect_to_db(config):
+def connect_to_db(config: dict) -> connection:
     """Returns a live database connection."""
     return connect(
         host=config["DB_HOST"],
@@ -66,14 +76,14 @@ def connect_to_db(config):
 def time_rounder(timestamp: datetime, get_fifteen: bool = True) -> datetime:
     """Obtains the most recent 15 min time, or the most recent hour"""
     if get_fifteen:
-        return (timestamp.replace(second=0, microsecond=0, minute=(timestamp.minute // 15 * 15)))
-    return (timestamp.replace(second=0, microsecond=0, minute=0))
+        return timestamp.replace(second=0, microsecond=0, minute=timestamp.minute // 15 * 15)
+    return timestamp.replace(second=0, microsecond=0, minute=0)
 
 
-def get_locations(_conn):
+def get_locations(_conn: connection) -> pd.DataFrame:
     """Get a list of all locations that are associated with forecast data."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(f"""SELECT loc_name, latitude, longitude
+        cur.execute("""SELECT loc_name, latitude, longitude
                     FROM location
                     WHERE loc_id IN
                     (SELECT loc_id FROM weather_report)""")
@@ -81,12 +91,12 @@ def get_locations(_conn):
     return pd.DataFrame(locations)
 
 
-def get_weather_alerts(_conn, location):
+def get_weather_alerts(_conn: connection, location: str) -> pd.DataFrame:
     """Get all weather alerts for a specific location."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""SET timezone='Europe/London'""")
-        cur.execute(f"""SELECT AL.name as "Alert type", SL.severity_level as "Severity",
-                    MIN(F.forecast_timestamp) as min_time, MAX(F.forecast_timestamp) as max_time
+        cur.execute(f"""SELECT AL.name AS "Alert type", SL.severity_level AS "Severity",
+                    MIN(F.forecast_timestamp) AS min_time, MAX(F.forecast_timestamp) AS max_time
                     FROM weather_alert AS WA
                     JOIN forecast AS F ON (WA.forecast_id = F.forecast_id)
                     JOIN severity_level AS SL ON (WA.severity_level_id = SL.severity_level_id)
@@ -101,37 +111,38 @@ def get_weather_alerts(_conn, location):
                     """)
 
         rows = cur.fetchall()
-        data_f = pd.DataFrame(rows).drop_duplicates()
-    return data_f
+        weather_data = pd.DataFrame(rows).drop_duplicates()
+    return weather_data
 
 
-def get_flood_alerts(_conn, location):
+def get_flood_alerts(_conn: connection, location: str) -> pd.DataFrame:
     """Get all flood alerts for a specific location."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""SET timezone='Europe/London'""")
-        cur.execute(f"""SELECT SL.severity_level AS "Severity", C.name AS "County", FW.time_raised AS "Time raised"
-                        FROM flood_warnings AS FW
-                        JOIN severity_level AS SL ON (FW.severity_level_id = SL.severity_level_id)
-                        JOIN location AS L ON (FW.loc_id = L.loc_id)
-                        JOIN county AS C ON (L.county_id = C.county_id)
-                        WHERE L.loc_name = '{location}'
-                        AND SL.severity_level_id < 4
-                        AND FW.time_raised > NOW() - interval '12 hours'
-                        ORDER BY SL.severity_level_id ASC""")
+        cur.execute(f"""SELECT SL.severity_level AS "Severity", C.name AS "County",
+                    FW.time_raised AS "Time raised"
+                    FROM flood_warnings AS FW
+                    JOIN severity_level AS SL ON (FW.severity_level_id = SL.severity_level_id)
+                    JOIN location AS L ON (FW.loc_id = L.loc_id)
+                    JOIN county AS C ON (L.county_id = C.county_id)
+                    WHERE L.loc_name = '{location}'
+                    AND SL.severity_level_id < 4
+                    AND FW.time_raised > NOW() - interval '12 hours'
+                    ORDER BY SL.severity_level_id ASC""")
 
         rows = cur.fetchall()
-        data_f = pd.DataFrame(rows).drop_duplicates()
-    return data_f
+        flood_data = pd.DataFrame(rows).drop_duplicates()
+    return flood_data
 
 
-def get_air_quality_alerts(_conn, location):
+def get_air_quality_alerts(_conn: connection, location: str) -> pd.DataFrame:
     """Get all air quality alerts for a specific location."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""SET timezone='Europe/London'""")
         cur.execute(f"""SELECT SL.severity_level AS "Severity",
-                    MIN(WR.report_time) as min_time, MAX(WR.report_time) as max_time
+                    MIN(WR.report_time) AS min_time, MAX(WR.report_time) AS max_time
                     FROM air_quality AS AQ
-                    JOIN weather_report as WR ON (WR.weather_report_id = AQ.weather_report_id)
+                    JOIN weather_report AS WR ON (WR.weather_report_id = AQ.weather_report_id)
                     JOIN severity_level AS SL ON (AQ.severity_level_id = SL.severity_level_id)
                     JOIN location AS L ON (WR.loc_id = L.loc_id)
                     WHERE L.loc_name = '{location}'
@@ -141,70 +152,74 @@ def get_air_quality_alerts(_conn, location):
 
         rows = cur.fetchall()
     if rows:
-        data_f = pd.DataFrame(rows).drop_duplicates()
-        data_f["Alert type"] = None
-        data_f['min_time'] = data_f['min_time'].apply(time_rounder)
-        data_f['max_time'] = data_f['max_time'].apply(time_rounder)
-        data_f = data_f[data_f['max_time'] >= time_rounder(datetime.now())]
-
-        for i in data_f.index:
-            data_f["Alert type"][i] = 'Air Quality'
-        return data_f
+        air_q_data = pd.DataFrame(rows).drop_duplicates()
+        air_q_data.loc[:, "Alert type"] = pd.Series(
+            ["Air Quality" for _ in range(len(air_q_data))])
+        air_q_data.loc[:, 'min_time'] = air_q_data.loc[:, 'min_time'].apply(
+            time_rounder)
+        air_q_data.loc[:, 'max_time'] = air_q_data.loc[:, 'max_time'].apply(
+            time_rounder)
+        air_q_data = air_q_data.loc[air_q_data.loc[:, 'max_time']
+                                    >= time_rounder(datetime.now()), :]
+        return air_q_data
     return pd.DataFrame()
 
 
-def get_location_forecast_day(_conn, location) -> pd.DataFrame:
+def get_location_forecast_day(_conn: connection, location: str) -> pd.DataFrame:
     """Returns forecast data for the upcoming day for a specific location."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("SET TIMEZONE TO 'Europe/London'")
-        cur.execute(f"""SELECT L.loc_id, L.latitude, L.longitude, f.forecast_timestamp as "Forecast time", wc.description as "Weather", f.temperature as "Temperature",
-                    f.apparent_temp as "Feels like", f.precipitation_prob as "Precipitation probability", f.rainfall as "Rainfall",
-                    f.precipitation as "Precipitation", f.snowfall as "Snowfall", f.visibility as "Visibility", f.humidity as "Humidity",
-                    f.lightning_potential as "Lightning potential", f.wind_speed as "Wind speed", f.cloud_cover as "Cloud cover"
+        cur.execute(f"""SELECT L.loc_id, L.loc_name, L.latitude, L.longitude,
+                    f.forecast_timestamp AS "Forecast time", wc.description AS "Weather", f.temperature AS "Temperature",
+                    f.apparent_temp AS "Feels like", f.precipitation_prob AS "Precipitation probability", f.rainfall AS "Rainfall",
+                    f.precipitation AS "Precipitation", f.snowfall AS "Snowfall", f.visibility AS "Visibility", f.humidity AS "Humidity",
+                    f.lightning_potential AS "Lightning potential", f.wind_speed AS "Wind speed", f.cloud_cover AS "Cloud cover"
                     FROM location AS l
-                    JOIN county as c
+                    JOIN county AS c
                     ON (l.county_id=c.county_id)
-                    JOIN country as co
+                    JOIN country AS co
                     ON (c.country_id=co.country_id)
-                    JOIN weather_report as w
+                    JOIN weather_report AS w
                     ON (l.loc_id=w.loc_id)
-                    JOIN forecast as f
+                    JOIN forecast AS f
                     ON (f.weather_report_id=w.weather_report_id)
-                    JOIN weather_code as wc
+                    JOIN weather_code AS wc
                     ON (F.weather_code_id=wc.weather_code_id)
                     WHERE F.forecast_timestamp < NOW() + interval '8 hours'
                     AND F.forecast_timestamp > NOW() - interval '15 minutes'
                     AND L.loc_name = '{location}'
-                    GROUP BY L.loc_id, L.latitude, L.longitude, "Forecast time", "Weather", "Temperature", "Feels like","Precipitation", "Humidity",
+                    GROUP BY L.loc_id, L.loc_name, L.latitude, L.longitude, "Forecast time", "Weather", "Temperature", "Feels like","Precipitation", "Humidity",
                     "Precipitation probability", "Rainfall", "Snowfall", "Visibility", "Lightning potential", "Wind speed", "Cloud cover"
                     ORDER BY f.forecast_timestamp
                     """)
 
         rows = cur.fetchall()
-        data_f = pd.DataFrame.from_dict(rows).drop_duplicates().sort_values(['loc_id']).groupby([
-            'loc_id'])
-        location_dupes = [df for _, df in data_f]
+        forecast_data = pd.DataFrame.from_dict(
+            rows).drop_duplicates().groupby(['loc_id'])
+        location_dupes = [data_frame for _, data_frame in forecast_data]
     return location_dupes[0].sort_values(['Forecast time'])
 
 
-def get_location_forecast_week(_conn, location) -> pd.DataFrame:
+def get_location_forecast_week(_conn: connection, location: str) -> pd.DataFrame:
     """Returns forecast data for the upcoming week for a specific location."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("SET TIMEZONE TO 'Europe/London'")
-        cur.execute(f"""SELECT L.loc_id, f.forecast_timestamp as "Forecast time", wc.description as "Weather", f.temperature as "Temperature",
-                    f.apparent_temp as "Feels like", f.precipitation_prob as "Precipitation probability", f.rainfall as "Rainfall",
-                    f.precipitation as "Precipitation", f.snowfall as "Snowfall", f.visibility as "Visibility", f.humidity as "Humidity",
-                    f.lightning_potential as "Lightning potential", f.wind_speed as "Wind speed", f.cloud_cover as "Cloud cover"
+        cur.execute(f"""SELECT L.loc_id, f.forecast_timestamp AS "Forecast time",
+                    wc.description AS "Weather", f.temperature AS "Temperature", f.apparent_temp AS "Feels like",
+                    f.precipitation_prob AS "Precipitation probability", f.rainfall AS "Rainfall",
+                    f.precipitation AS "Precipitation", f.snowfall AS "Snowfall", f.visibility AS "Visibility",
+                    f.humidity AS "Humidity", f.lightning_potential AS "Lightning potential", f.wind_speed AS "Wind speed",
+                    f.cloud_cover AS "Cloud cover"
                     FROM location AS l
-                    JOIN county as c
+                    JOIN county AS c
                     ON (l.county_id=c.county_id)
-                    JOIN country as co
+                    JOIN country AS co
                     ON (c.country_id=co.country_id)
-                    JOIN weather_report as w
+                    JOIN weather_report AS w
                     ON (l.loc_id=w.loc_id)
-                    JOIN forecast as f
+                    JOIN forecast AS f
                     ON (f.weather_report_id=w.weather_report_id)
-                    JOIN weather_code as wc
+                    JOIN weather_code AS wc
                     ON (F.weather_code_id=wc.weather_code_id)
                     WHERE F.forecast_timestamp > NOW()
                     AND l.loc_name = '{location}'
@@ -214,26 +229,26 @@ def get_location_forecast_week(_conn, location) -> pd.DataFrame:
                     """)
 
         rows = cur.fetchall()
-        data_f = pd.DataFrame.from_dict(rows)
-        data_f = pd.DataFrame.from_dict(rows).drop_duplicates().sort_values(['loc_id']).groupby([
-            'loc_id'])
-        location_dupes = [df for _, df in data_f]
+        forecast_data = pd.DataFrame.from_dict(
+            rows).drop_duplicates().sort_values(['loc_id']).groupby(['loc_id'])
+        location_dupes = [data_frame for _, data_frame in forecast_data]
 
     return location_dupes[0].sort_values(['Forecast time'])
 
 
-def get_air_quality(_conn, location) -> pd.DataFrame:
+def get_air_quality(_conn: connection, location: str) -> pd.DataFrame:
     """Returns air quality data for the past day for a specific location."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(f"""SELECT aq.o3_concentration AS "O3 concentration", aq.severity_level_id AS "Severity level",
-                    wr.report_time AS "Report time", sl.severity_level AS "Severity"
+        cur.execute(f"""SELECT aq.o3_concentration AS "O3 concentration",
+                    aq.severity_level_id AS "Severity level", wr.report_time AS "Report time",
+                    sl.severity_level AS "Severity"
                     FROM
                     air_quality AS aq
                     JOIN
                     weather_report AS wr
                     ON (aq.weather_report_id = wr.weather_report_id)
                     JOIN
-                    severity_level as sl
+                    severity_level AS sl
                     ON (sl.severity_level_id = aq.severity_level_id)
                     JOIN
                     location AS l
@@ -242,25 +257,26 @@ def get_air_quality(_conn, location) -> pd.DataFrame:
                     """)
 
         rows = cur.fetchall()
-        data_f = pd.DataFrame.from_dict(rows)
+        air_q_data = pd.DataFrame.from_dict(rows)
 
-    return data_f
+    return air_q_data
 
 
-def get_current_weather(_conn, location) -> pd.DataFrame:
+def get_current_weather(_conn: connection, location: str) -> pd.DataFrame:
     """Extract analytics about current weather for a specific location"""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(f"""SELECT f.forecast_timestamp as "Forecast time", wc.description as "Weather", f.*
+        cur.execute(f"""SELECT f.forecast_timestamp AS "Forecast time", wc.description AS "Weather",
+                    f.*
                     FROM location AS l
-                    JOIN county as c
+                    JOIN county AS c
                     ON (l.county_id=c.county_id)
-                    JOIN country as co
+                    JOIN country AS co
                     ON (c.country_id=co.country_id)
-                    JOIN weather_report as w
+                    JOIN weather_report AS w
                     ON (l.loc_id=w.loc_id)
-                    JOIN forecast as f
+                    JOIN forecast AS f
                     ON (f.weather_report_id=w.weather_report_id)
-                    JOIN weather_code as wc
+                    JOIN weather_code AS wc
                     ON (f.weather_code_id=wc.weather_code_id)
                     WHERE F.forecast_timestamp = '{time_rounder(datetime.now())}'
                     AND l.loc_name = '{location}'
@@ -268,27 +284,28 @@ def get_current_weather(_conn, location) -> pd.DataFrame:
                     """)
 
         rows = cur.fetchall()
-        data_f = pd.DataFrame.from_dict(rows)
+        weather_data = pd.DataFrame.from_dict(rows)
 
-    return data_f
+    return weather_data
 
 
-def get_forecast_data(_conn) -> pd.DataFrame:
+def get_forecast_data(_conn: connection) -> pd.DataFrame:
     """Get basic current weather for all locations."""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""SET timezone='Europe/London'""")
-        cur.execute(f"""SELECT l.latitude, l.longitude, l.loc_name as "Location", wc.description as "Weather",
+        cur.execute(f"""SELECT l.latitude, l.longitude, l.loc_name AS "Location",
+                    wc.description AS "Weather",
                     f.weather_code_id AS "Weather code"
                     FROM location AS l
-                    JOIN county as c
+                    JOIN county AS c
                     ON (l.county_id=c.county_id)
-                    JOIN country as co
+                    JOIN country AS co
                     ON (c.country_id=co.country_id)
-                    JOIN weather_report as w
+                    JOIN weather_report AS w
                     ON (l.loc_id=w.loc_id)
-                    JOIN forecast as f
+                    JOIN forecast AS f
                     ON (f.weather_report_id=w.weather_report_id)
-                    JOIN weather_code as wc
+                    JOIN weather_code AS wc
                     ON (f.weather_code_id=wc.weather_code_id)
                     WHERE F.forecast_timestamp = '{time_rounder(datetime.now())}'
                     GROUP BY l.latitude, l.longitude, "Location", "Weather", f.forecast_timestamp, f.weather_code_id
@@ -296,14 +313,15 @@ def get_forecast_data(_conn) -> pd.DataFrame:
                     """)
 
         rows = cur.fetchall()
-        data_f = pd.DataFrame.from_dict(rows).drop_duplicates()
-    data_f["icon_data"] = data_f["Weather code"].apply(icon_data)
-    return [d for _, d in data_f.groupby(['Weather code'])]
+        forecast_data = pd.DataFrame.from_dict(rows).drop_duplicates()
+    forecast_data.loc[:, "icon_data"] = forecast_data.loc[:,
+                                                          "Weather code"].apply(icon_data)
+    return [d for _, d in forecast_data.groupby(['Weather code'])]
 
 
-def get_map(loc_data, lon, lat):
+def get_map(loc_data: pd.DataFrame, lon: float, lat: float) -> pdk.Deck:
     """Generate a pydeck map, zoomed in on a specific location."""
-    st.pydeck_chart(pdk.Deck(
+    return pdk.Deck(
         map_style='dark',
         initial_view_state=pdk.ViewState(
             latitude=lat,
@@ -316,7 +334,7 @@ def get_map(loc_data, lon, lat):
         layers=[
             pdk.Layer(
                 'IconLayer',
-                data=df,
+                data=data_frame,
                 get_icon="icon_data",
                 opacity=500,
                 get_size=20,
@@ -324,31 +342,35 @@ def get_map(loc_data, lon, lat):
                 get_position="[longitude, latitude]",
                 get_text="location",
                 pickable=True
-            ) for df in loc_data
+            ) for data_frame in loc_data
         ],
         tooltip={'html': '<b>Weather:</b> {Weather}\
                  <b>Location:</b> {Location}',
-                 'style': {"backgroundColor": "navyblue", 'color': '#87CEEB', 'font-size': '100%'}}))
+                 'style': {"backgroundColor": "navyblue", 'color': '#87CEEB', 'font-size': '100%'}})
 
 
-def compass(wind_direction):
+def make_compass(wind_direction: int) -> alt.LayerChart:
     """Create a compass display."""
-    compass_star = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Compass_Rose_en_small_N.svg/2835px-Compass_Rose_en_small_N.svg.png"
-    nautical_rose = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Compass_Rose-Black.svg/2048px-Compass_Rose-Black.svg.png"
-    a = {'x': [0], 'y': [0], 'img': [compass_star], 'rose': [nautical_rose],
-         'arr_x': [0.75*np.cos((wind_direction-90)/180*np.pi)], 'arr_y': [-0.75*np.sin((wind_direction-90)/180*np.pi)]}
-    c = {'c_x': [-1.2, 1.2, -1.2, 1.2], 'c_y': [-1.2, -1.2, 1.2, 1.2]}
-    df = pd.DataFrame(a)
-    corners = pd.DataFrame(c)
+    compass_star = """https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Compass_Rose_en_smal
+l_N.svg/2835px-Compass_Rose_en_small_N.svg.png"""
+    nautical_rose = """https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Compass_Rose-Black.
+svg/2048px-Compass_Rose-Black.svg.png"""
+    plot_points = {'x': [0], 'y': [0], 'img': [compass_star], 'rose': [nautical_rose],
+                   'arr_x': [0.75*np.cos((wind_direction-90)/180*np.pi)],
+                   'arr_y': [-0.75*np.sin((wind_direction-90)/180*np.pi)]}
+    corners = {'c_x': [-1.2, 1.2, -1.2, 1.2], 'c_y': [-1.2, -1.2, 1.2, 1.2]}
 
-    star = alt.Chart(df).mark_image(width=230, height=230).encode(
+    plots_df = pd.DataFrame(plot_points)
+    corners_df = pd.DataFrame(corners)
+
+    star = alt.Chart(plots_df).mark_image(width=230, height=230).encode(
         x=alt.X('x', axis=alt.Axis(ticks=False,
                                    domain=False, labels=False, title=None)),
         y=alt.Y('y', axis=alt.Axis(ticks=False,
                                    domain=False, labels=False, title=None)),
         url='img',
         tooltip=alt.value(None))
-    nautical = alt.Chart(df).mark_image(width=195, height=195).encode(
+    nautical = alt.Chart(plots_df).mark_image(width=195, height=195).encode(
         x=alt.X('x', axis=alt.Axis(ticks=False,
                                    domain=False, labels=False, title=None)),
         y=alt.Y('y', axis=alt.Axis(ticks=False,
@@ -356,7 +378,7 @@ def compass(wind_direction):
         url='rose',
         tooltip=alt.value(None))
 
-    points = alt.Chart(corners).mark_point(size=0).encode(
+    points = alt.Chart(corners_df).mark_point(size=0).encode(
         x=alt.X('c_x', axis=alt.Axis(
             ticks=False, domain=False, labels=False, title=None)),
         y=alt.Y('c_y', axis=alt.Axis(
@@ -366,7 +388,7 @@ def compass(wind_direction):
         width=260,
         height=260
     )
-    dot = alt.Chart(df).mark_point(size=700, color="gold", opacity=1).encode(
+    dot = alt.Chart(plots_df).mark_point(size=700, color="gold", opacity=1).encode(
         x=alt.X('arr_x', axis=alt.Axis(
             ticks=False, domain=False, labels=False, title=None)),
         y=alt.Y('arr_y', axis=alt.Axis(
@@ -376,7 +398,11 @@ def compass(wind_direction):
         width=260,
         height=260
     )
-    dot_border = alt.Chart(df).mark_point(size=750, color="black", align="center", baseline="middle", opacity=1).encode(
+    dot_border = alt.Chart(plots_df).mark_point(size=750,
+                                                color="black",
+                                                align="center",
+                                                baseline="middle",
+                                                opacity=1).encode(
         x=alt.X('arr_x', axis=alt.Axis(
             ticks=False, domain=False, labels=False, title=None)),
         y=alt.Y('arr_y', axis=alt.Axis(
@@ -387,7 +413,7 @@ def compass(wind_direction):
         height=260
     )
 
-    circle = alt.Chart(df).mark_arc(color="#ADD8E6").encode(
+    circle = alt.Chart(plots_df).mark_arc(color="#ADD8E6").encode(
         theta=alt.value(20),
         radius=alt.value(118),
         x=alt.X('x', axis=alt.Axis(ticks=False,
@@ -398,7 +424,7 @@ def compass(wind_direction):
         width=260,
         height=260
     )
-    border = alt.Chart(df).mark_arc(color="black").encode(
+    border = alt.Chart(plots_df).mark_arc(color="black").encode(
         theta=alt.value(20),
         radius=alt.value(122),
         x=alt.X('x', axis=alt.Axis(ticks=False,
@@ -411,7 +437,8 @@ def compass(wind_direction):
         height=260
     )
 
-    compass = alt.layer(points, border, circle, nautical, star, dot_border, dot, title=alt.Title(' ', fontSize=0.5)).configure_view(
+    compass = alt.layer(points, border, circle, nautical, star, dot_border, dot,
+                        title=alt.Title(' ', fontSize=0.5)).configure_view(
         strokeWidth=0).configure_axis(grid=False).properties(
         width=260,
         height=260
@@ -419,7 +446,7 @@ def compass(wind_direction):
     return compass
 
 
-def sort_data_by_time(data, time_code):
+def sort_data_by_time(data: pd.DataFrame, time_code: str) -> pd.DataFrame:
     """Group data by a particular time step."""
     data["Temperature"] = data[
         "Temperature"].resample(time_code).mean().round(1)
@@ -435,13 +462,13 @@ def sort_data_by_time(data, time_code):
         "Lightning potential"].resample(time_code).sum().round(1)
     data["Humidity"] = data[
         "Humidity"].resample(time_code).mean().round()
-    data = data.dropna(how="any")  # drop nans
-    data = data.loc[:, (data != 0).any(axis=0)]  # drop columns with zeros
+    data = data.dropna(how="any")
+    data = data.loc[:, (data != 0).any(axis=0)]
     data = data.reset_index(level=['Forecast time']).drop_duplicates()
     return data
 
 
-def format_data_types(data, time_format):
+def format_data_types(data: pd.DataFrame, time_format: str) -> pd.DataFrame:
     """Format data in a database to strings, displaying appropiate units."""
     data['Forecast time'] = data['Forecast time'].dt.strftime(
         time_format)
@@ -470,7 +497,8 @@ def format_data_types(data, time_format):
 def create_location_selection_box(_conn) -> str:
     """Create a selection box for all locations."""
     location_data = get_locations(_conn)
-    locations = location_data['loc_name'].to_list()
+    locations = location_data['loc_name'].drop_duplicates(
+    ).sort_values().to_list()
     location = st.selectbox('Locations',
                             ['Select a location...'] + locations)
     if location != 'Select a location...':
@@ -482,41 +510,65 @@ def create_location_selection_box(_conn) -> str:
     return location, lat, lon
 
 
-def write_alerts(alerts, location):
-    """Write streamlit warnings for weather alerts."""
-    for _, alert in alerts.iterrows():
-        if alert["Severity"] == "Alert":
-            icon = "❕"
-        elif alert["Severity"] == "Warning":
-            icon = "⚠️"
-        elif alert["Severity"] == "Severe Warning":
-            icon = "🚨"
-        if alert["Alert type"] == "Air Quality":
-            key_words = 'had an'
-        else:
-            key_words = 'has a'
-        if alert["min_time"] != alert["max_time"]:
-            st.warning(
-                f'**{location}** {key_words} **{alert["Alert type"]} {alert["Severity"]}** from **{alert["min_time"]}** to **{alert["max_time"]}**.', icon=icon)
-        else:
-            st.warning(
-                f'**{location}** {key_words} **{alert["Alert type"]} {alert["Severity"]}** at **{alert["min_time"]}**.', icon=icon)
+def get_min_max_dates_times(w_alert: pd.Series) -> tuple[str]:
+    """Extract forecast dates and times from a weather alert."""
+    datetime_min = w_alert['min_time']
+    date_min = datetime_min.date()
+    time_min = datetime_min.time()
+    datetime_max = w_alert['max_time']
+    date_max = datetime_max.date()
+    time_max = datetime_max.time()
+    if date_min == datetime.today().date():
+        date_min = '**Today**'
+    if date_max == datetime.today().date():
+        date_max = '**Today**'
+    return time_min, time_max, date_min, date_max
 
 
-def write_floods(floods):
-    """Write streamlit warnings for flood alerts."""
-    for _, flood in floods.iterrows():
-        if flood["Severity"] == "Alert":
-            icon = "❕"
-        elif flood["Severity"] == "Warning":
-            icon = "⚠️"
-        elif flood["Severity"] == "Severe Warning":
-            icon = "🚨"
-        st.warning(
-            f'**{flood["County"]}** had a **Flood {flood["Severity"]}** raised at **{flood["Time raised"]}**.', icon=icon)
+def write_alert(w_alert, location):
+    """Write strings for """
+    alert_type = w_alert["Alert type"]
+    time_min, time_max, date_min, date_max = get_min_max_dates_times(
+        w_alert)
+    if w_alert["Alert type"] == "Air Quality":
+        key_words = 'had an'
+    else:
+        key_words = 'has a'
+
+    if date_min != date_max:
+        return [f'**{location} ** {key_words} **', alert_type, f'** raised from **{date_min}** at \
+                **{time_min}** to **{date_max}** at **{time_max}**.']
+    if time_min != time_max:
+        return [f'**{location}** {key_words} **', alert_type, f'** raised \
+                        **{date_min}** from **{time_min}** to **{time_max}**.']
+    return [f'**{location}** {key_words} **', alert_type, f'** raised \
+                        **{date_min}** at **{time_min}**.']
 
 
-def get_current_metrics(current_weather):
+def write_alerts(weather_alerts: pd.DataFrame, location: str) -> list[str]:
+    """Create weather alert strings for various severities at a specfic location."""
+    severes = []
+    warnings = []
+    alerts = []
+    weather_alerts = weather_alerts.groupby(["Severity"])
+    for _, w_alert_a in weather_alerts:
+        severity = w_alert_a.loc[:, "Severity"].values[0]
+        for _, w_alert in w_alert_a.sort_values(['min_time']).iterrows():
+            first_line, alert_type, second_line = write_alert(
+                w_alert, location)
+            if severity == 'Severe Warning':
+                severes.append('🚨 ' + first_line + 'Severe ' +
+                               alert_type + ' Warning' + second_line)
+            if severity == 'Warning':
+                warnings.append('⚠️ ' + first_line +
+                                alert_type + ' Warning' + second_line)
+            if severity == 'Alert':
+                alerts.append('❗ ' + first_line + alert_type +
+                              ' Alert' + second_line)
+    return severes, warnings, alerts
+
+
+def get_current_metrics(current_weather: pd.DataFrame) -> None:
     """Display streamlit metrics for weather."""
     col1, col2, col3 = st.columns([1, 1, 1])
     with col1:
@@ -541,19 +593,23 @@ def get_current_metrics(current_weather):
         st.write("Wind direction")
 
         st.altair_chart(
-            compass(current_weather['wind_direction'].values[0]), theme=None)
+            make_compass(current_weather['wind_direction'].values[0]), theme=None)
         st.markdown("# ")
 
 
-def write_table(data):
+def write_table(data: pd.DataFrame) -> None:
     """Write and format a forecast table."""
     main_cols = [
         {'selector': 'th', 'props': 'background-color: #000042; color:  #ffffff'}]
-    st.markdown(data.T.style.hide(axis="columns").map(lambda x: "background-color:#000042;color:#ffffff" if isinstance(x, str) and (':' in x or ('/' in x and len(x) == 5)) else "background-color:#82a6f4").set_table_styles(main_cols, axis=1).to_html(),
-                unsafe_allow_html=True)
+    st.markdown(data.T.style.hide(axis="columns").map(
+        lambda x: "background-color:#000042;color:#ffffff"
+        if isinstance(x, str) and (':' in x or ('/' in x and len(x) == 5))
+        else "background-color:#82a6f4").set_table_styles(main_cols, axis=1).to_html(),
+        unsafe_allow_html=True)
 
 
-def create_precipitation_graph(data):
+def create_precipitation_graph(data: pd.DataFrame) -> None:
+    """Create and display in streamlit an altair chart regarding rainfall and precipitation."""
     prec_col, rain_col = st.columns(2)
     with prec_col:
         precipitation_graph = alt.Chart(data).mark_area(color="navyblue").encode(
@@ -595,7 +651,8 @@ def create_precipitation_graph(data):
         ), use_container_width=True)
 
 
-def create_air_quality_graph(location) -> alt.Chart:
+def create_air_quality_graph(location: str) -> alt.LayerChart:
+    """Create a graph displaying air quality, with lines to mark air quality thresholds."""
     air_quality = get_air_quality(conn, location)
     air_quality["Report time"] = air_quality["Report time"].apply(
         time_rounder)
@@ -625,7 +682,8 @@ def create_air_quality_graph(location) -> alt.Chart:
                      aq_chart3)
 
 
-def create_temperature_graph(data):
+def create_temperature_graph(data: pd.DataFrame) -> alt.Chart:
+    """Create a graph for displaying temperature and apparent temperature."""
     return alt.Chart(data).mark_line().transform_fold(
         fold=['Temperature', 'Feels like'],
         as_=['variable', 'value']
@@ -640,7 +698,8 @@ def create_temperature_graph(data):
     )
 
 
-def create_weather_graph(data, variable, title, colour):
+def create_weather_graph(data: pd.DataFrame, variable: str, title: str, colour: str) -> alt.Chart:
+    """Create an altair line graph for various weather or airquality."""
     return alt.Chart(data).mark_line(color=colour).encode(
         x=alt.X('Forecast time:T', axis=alt.Axis(
             grid=True)).scale(zero=False).title('Time'),
@@ -649,7 +708,9 @@ def create_weather_graph(data, variable, title, colour):
     )
 
 
-def create_not_precipitation_graph(graph_type_day, forecast_d_loc, location):
+def create_not_precipitation_graph(graph_type_day: str, forecast_d_loc: pd.DataFrame,
+                                   location: str) -> None:
+    """Create and format a graph displaying weather or air quality."""
     if graph_type_day == "Air quality":
         weather_today_graph = create_air_quality_graph(location)
     elif graph_type_day == "Temperature":
@@ -681,18 +742,21 @@ def create_not_precipitation_graph(graph_type_day, forecast_d_loc, location):
     ), use_container_width=True)
 
 
-def today_forecast(_conn, location):
+def today_forecast(_conn: connection, location: str) -> None:
+    """Get the forecast for the upcoming day and display tables and graphs."""
     forecast_d_loc = get_location_forecast_day(_conn, location)
 
     forecast_hourly = forecast_d_loc[[
         "Forecast time", "Weather", "Temperature", "Feels like", "Humidity",
-        "Precipitation probability", "Rainfall", "Snowfall", "Lightning potential", "Cloud cover"]].copy().set_index("Forecast time")
+        "Precipitation probability", "Rainfall", "Snowfall", "Lightning potential",
+        "Cloud cover"]].copy().set_index("Forecast time")
     forecast_hourly = sort_data_by_time(forecast_hourly, 'h')
     forecast_hourly = format_data_types(forecast_hourly, '%H:%M')
     write_table(forecast_hourly)
 
     graph_type_day = st.selectbox('Daily data', [
-        "Temperature", "Visibility", "Air quality", "Precipitation", "Snowfall", "Lightning", "Cloud cover", "Humidity",])
+        "Temperature", "Visibility", "Air quality", "Precipitation", "Snowfall", "Lightning",
+        "Cloud cover", "Humidity",])
     if graph_type_day == "Precipitation":
         create_precipitation_graph(forecast_d_loc)
     else:
@@ -700,11 +764,13 @@ def today_forecast(_conn, location):
             graph_type_day, forecast_d_loc, location)
 
 
-def week_forecast(_conn, location):
+def week_forecast(_conn: connection, location: str) -> None:
+    """Get the forecast for the upcoming week and display tables and graphs."""
     forecast_week_fix = get_location_forecast_week(_conn, location)
     forecast_week = forecast_week_fix[[
         "Forecast time", "Weather", "Temperature", "Feels like", "Humidity",
-        "Precipitation probability", "Snowfall", "Lightning potential", "Cloud cover"]].copy().set_index("Forecast time")
+        "Precipitation probability", "Snowfall", "Lightning potential",
+        "Cloud cover"]].copy().set_index("Forecast time")
     forecast_week = sort_data_by_time(forecast_week, 'd')
     forecast_week = format_data_types(forecast_week, '%d/%m')
 
@@ -712,7 +778,8 @@ def week_forecast(_conn, location):
     st.markdown('#')
 
     graph_type_week = st.selectbox('Weekly data', [
-        "Temperature", "Visibility", "Air quality", "Precipitation", "Snowfall", "Lightning", "Cloud cover", "Humidity",])
+        "Temperature", "Visibility", "Air quality", "Precipitation", "Snowfall", "Lightning",
+        "Cloud cover", "Humidity",])
 
     if graph_type_week == "Precipitation":
         create_precipitation_graph(forecast_week_fix)
@@ -721,7 +788,8 @@ def week_forecast(_conn, location):
             graph_type_week, forecast_week_fix, location)
 
 
-def format_time_list(times):
+def format_time_list(times: list[pd.Timestamp]):
+    """Write out times and time ranges formatted for markdown."""
     if len(times) == 1:
         return str(times[0])
     time_str = ''
@@ -734,7 +802,7 @@ def format_time_list(times):
 
 
 def write_floods(floods: pd.DataFrame) -> tuple[list[tuple[str]]]:
-    """Write streamlit warnings for flood alerts."""
+    """Create warnings for flood alerts."""
     errors = []
     warnings = []
     county = floods["County"].values[0]
@@ -753,14 +821,17 @@ def write_floods(floods: pd.DataFrame) -> tuple[list[tuple[str]]]:
                 date_val = f'on **{date_val}**'
             if severity == "Severe Warning":
                 errors.append((
-                    f'**{county}** had a **Severe Flood Warning** raised {date_val} at {times}.', "🚨"))
+                    f'**{county}** had a **Severe Flood Warning** raised {date_val} at {times}.',
+                    "🚨"))
             elif severity == "Warning":
                 errors.append((
-                    f'**{county}** had a **Flood Warning** raised {date_val} at {times}.', "⚠️"))
+                    f'**{county}** had a **Flood Warning** raised {date_val} at {times}.',
+                    "⚠️"))
 
             elif severity == "Alert":
                 warnings.append((
-                    f'**{county}** had a **Flood Alert** raised {date_val} at {times}.', "❕"))
+                    f'**{county}** had a **Flood Alert** raised {date_val} at {times}.',
+                    "❕"))
     return errors, warnings
 
 
@@ -769,30 +840,39 @@ if __name__ == "__main__":
     st.set_page_config(layout="wide")
     st.title('Quick Search')
     conn = connect_to_db(dict(ENV))
-    location, lat, lon = create_location_selection_box(conn)
-    if location != 'Select a location...':
-        # floods = get_flood_alerts(conn, location)
-        alerts = pd.concat([get_air_quality_alerts(conn, location),
-                           get_weather_alerts(conn, location)])
-        # if not floods.empty:
-        #     errors, warnings = write_floods(floods)
-        #     for error in errors:
-        #         st.error(error[0], icon=error[1])
-
-        #     for warning in warnings:
-        #         st.warning(warning[0], icon=warning[1])
-        write_alerts(alerts, location)
+    loc, latitude, longitude = create_location_selection_box(conn)
+    if loc != 'Select a location...':
+        # floods = get_flood_alerts(conn, loc)
+        alerts_data = pd.concat([get_air_quality_alerts(conn, loc),
+                                 get_weather_alerts(conn, loc)])
+        if not alerts_data.empty:
+            w_severes, w_warnings, w_alerts = write_alerts(alerts_data, loc)
+            for severe in w_severes:
+                st.markdown(
+                    f"""<span style="background-color:rgb(128,0,128,0.2);color:	#5c005c;
+                    font-size:1.35em;border-radius:5px;padding:10px;">{severe}</span>""",
+                    unsafe_allow_html=True)
+            for warning in w_warnings:
+                st.markdown(
+                    f"""<span style="background-color:rgb(240,128,128,0.2);color:#670000;
+                    font-size:1.35em;border-radius:5px;padding:10px;">{warning}</span>""",
+                    unsafe_allow_html=True)
+            for alert in w_alerts:
+                st.markdown(
+                    f"""<span style="background-color:rgb(255,205,0,0.2);color:#423d01;
+                    font-size:1.2em;border-radius:5px;padding:8px;">{alert}</span>""",
+                    unsafe_allow_html=True)
 
         st.markdown("# Current weather")
-        current_weather = get_current_weather(conn, location)
-        get_current_metrics(current_weather)
+        current_weather_data = get_current_weather(conn, loc)
+        get_current_metrics(current_weather_data)
 
         st.markdown("## Today's forecast")
-        today_forecast(conn, location)
+        today_forecast(conn, loc)
 
         st.markdown("## This week's forecast")
-        week_forecast(conn, location)
+        week_forecast(conn, loc)
 
-        get_map(get_forecast_data(conn), lon, lat)
+        st.pydeck_chart(get_map(get_forecast_data(conn), longitude, latitude))
     else:
         st.write('Please pick a location!')
