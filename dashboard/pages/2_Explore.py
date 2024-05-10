@@ -206,7 +206,6 @@ def get_air_qualities(_conn: connection):
                 ['loc_id']).groupby(['loc_id'])
             locations = pd.concat([locations,
                                    [data_frame for _, data_frame in loc_dup_group][0].drop_duplicates()])
-        print(locations)
     return locations
 
 
