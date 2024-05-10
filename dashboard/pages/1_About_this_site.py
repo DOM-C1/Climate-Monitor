@@ -27,11 +27,11 @@ def intro() -> None:
         <b>Sign Up</b>: Want to sign up to daily newsletters, or receive notifications about weather alerts 
         near you? Then sign up here!<br/><br/></span>""", unsafe_allow_html=True)
     st.markdown("""<span style="font-size:1.3em;">
-        <b> Contributors </b><br/>
-        Project manager: <b>Dom Chambers</b><br/>
-        Quality Assurance: <b>Arjun Babhania</b><br/>
-        Architect: <b>Nathan McKittrick</b><br/>
-        Architect: <b>Dana Weetman</b></span>
+        <b> Contributors: </b><br/>
+        Dom Chambers<br/>
+        Arjun Babhania<br/>
+        Nathan McKittrick<br/>
+        Dana Weetman</span>
     """, unsafe_allow_html=True
                 )
 

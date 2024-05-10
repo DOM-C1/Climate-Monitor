@@ -29,7 +29,7 @@ def time_rounder(timestamp: datetime) -> datetime:
                              minute=timestamp.minute // 15 * 15)
 
 
-def get_locations_with_alerts(_conn: connection) -> pd.DataFrame:
+def get_locations_with_alerts(_conn: connection) -> list[pd.DataFrame]:
     """Get the weather alert information from the database"""
     with _conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""SET timezone='Europe/London'""")
@@ -56,12 +56,11 @@ def get_locations_with_alerts(_conn: connection) -> pd.DataFrame:
             data_f = data_f.groupby(['Location'])
             locations = []
             for _, data_frame in data_f:
-                loc_dup_group = data_frame.sort_values(
-                    ['loc_id']).groupby(['loc_id'])
-                locations.append(
-                    [data_frame for _, data_frame in loc_dup_group][0].drop_duplicates())
+                loc_dup_group = data_frame.groupby(['loc_id'])
+                locations.append([
+                    data_frame for _, data_frame in loc_dup_group][0].drop_duplicates())
             return locations
-    return pd.DataFrame()
+    return []
 
 
 def get_flood_alerts(_conn: connection) -> pd.DataFrame:
@@ -79,11 +78,13 @@ def get_flood_alerts(_conn: connection) -> pd.DataFrame:
                     ORDER BY SL.severity_level_id ASC""")
 
         rows = cur.fetchall()
-        data_f = pd.DataFrame(rows)
 
-    data_f.loc[:, "Time raised"] = data_f.loc[:, "Time raised"].apply(
-        lambda x: x.replace(second=0))
-    return data_f.drop_duplicates().groupby(["County"])
+    if rows:
+        data_f = pd.DataFrame(rows)
+        data_f.loc[:, "Time raised"] = data_f.loc[:,
+                                                  "Time raised"].apply(time_rounder)
+        return data_f.drop_duplicates().groupby(["County"])
+    return pd.DataFrame()
 
 
 def get_air_quality_alerts(_conn: connection) -> pd.DataFrame:
@@ -110,7 +111,6 @@ def get_air_quality_alerts(_conn: connection) -> pd.DataFrame:
                                                'max_time'].apply(time_rounder)
         data_f = data_f.loc[data_f.loc[:, 'max_time']
                             >= time_rounder(datetime.now()), :]
-
         for i in data_f.index:
             data_f.loc[:, "Alert type"][i] = 'Air Quality'
         return data_f.drop_duplicates()
@@ -143,8 +143,7 @@ def write_floods(flood_alerts: pd.DataFrame) -> tuple[list[tuple[str]]]:
     for _, flood_s in flood_alerts:
         flood_d = flood_s.groupby(["Dates"])
         for _, flood in flood_d:
-            times = flood.loc[:, "Time raised"].apply(
-                time_rounder).dt.time.values
+            times = flood.loc[:, "Time raised"].dt.time.values
             times = format_time_list(times)
             severity = flood.loc[:, "Severity"].unique()[0]
             date_val = flood.loc[:, "Dates"].values[0]
@@ -190,7 +189,7 @@ def write_alert(w_alert, location):
         key_words = 'has a'
 
     if date_min != date_max:
-        return [f'**{location} ** {key_words} **', alert_type, f'** raised from **{date_min}** at \
+        return [f'**{location}** {key_words} **', alert_type, f'** raised from **{date_min}** at \
                 **{time_min}** to **{date_max}** at **{time_max}**.']
     if time_min != time_max:
         return [f'**{location}** {key_words} **', alert_type, f'** raised \
@@ -204,7 +203,7 @@ def write_alerts(weather_alerts: pd.DataFrame) -> list[str]:
     severes = []
     warnings = []
     alerts = []
-    location = w_alerts.loc[:, "Location"].values[0]
+    location = weather_alerts.loc[:, "Location"].values[0]
     weather_alerts = weather_alerts.groupby(["Severity"])
     for _, w_alert_a in weather_alerts:
         severity = w_alert_a.loc[:, "Severity"].values[0]
@@ -212,14 +211,14 @@ def write_alerts(weather_alerts: pd.DataFrame) -> list[str]:
             first_line, alert_type, second_line = write_alert(
                 w_alert, location)
             if severity == 'Severe Warning':
-                severes.append('🚨 ' + first_line + 'Severe' +
-                               alert_type + 'Warning' + second_line)
+                severes.append('🚨 ' + first_line + 'Severe ' +
+                               alert_type + ' Warning' + second_line)
             if severity == 'Warning':
                 warnings.append('⚠️ ' + first_line +
-                                alert_type + 'Warning' + second_line)
+                                alert_type + ' Warning' + second_line)
             if severity == 'Alert':
                 alerts.append('❗ ' + first_line + alert_type +
-                              'Alert' + second_line)
+                              ' Alert' + second_line)
     return severes, warnings, alerts
 
 
@@ -227,15 +226,15 @@ if __name__ == "__main__":
     load_dotenv()
     st.title("Weather alerts across the UK")
     conn = connect_to_db(dict(ENV))
-    w_alerts = get_locations_with_alerts(conn)
+    weather_alerts = get_locations_with_alerts(conn)
     air_alerts = get_air_quality_alerts(conn)
-    floods = get_flood_alerts(conn)
+    floods = [df for _, df in get_flood_alerts(conn)]
     st.markdown("### Flood warnings")
     if floods:
         f_severes = []
         f_warnings = []
         f_alerts = []
-        for _, loc in floods:
+        for loc in floods:
             flood_alert_lists = write_floods(loc)
             f_severes += flood_alert_lists[0]
             f_warnings += flood_alert_lists[1]
@@ -259,11 +258,11 @@ if __name__ == "__main__":
     else:
         st.markdown("""No flood alerts to show!""")
     st.markdown("### Weather warnings")
-    if not w_alerts.empty:
+    if weather_alerts:
         w_severes = []
         w_warnings = []
         w_alerts = []
-        for _, loc in w_alerts.groupby("Location"):
+        for loc in weather_alerts:
             weather_alert_list = write_alerts(loc)
             w_severes += weather_alert_list[0]
             w_warnings += weather_alert_list[1]

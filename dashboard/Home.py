@@ -497,7 +497,8 @@ def format_data_types(data: pd.DataFrame, time_format: str) -> pd.DataFrame:
 def create_location_selection_box(_conn) -> str:
     """Create a selection box for all locations."""
     location_data = get_locations(_conn)
-    locations = location_data['loc_name'].to_list()
+    locations = location_data['loc_name'].drop_duplicates(
+    ).sort_values().to_list()
     location = st.selectbox('Locations',
                             ['Select a location...'] + locations)
     if location != 'Select a location...':
@@ -556,14 +557,14 @@ def write_alerts(weather_alerts: pd.DataFrame, location: str) -> list[str]:
             first_line, alert_type, second_line = write_alert(
                 w_alert, location)
             if severity == 'Severe Warning':
-                severes.append('🚨 ' + first_line + 'Severe' +
-                               alert_type + 'Warning' + second_line)
+                severes.append('🚨 ' + first_line + 'Severe ' +
+                               alert_type + ' Warning' + second_line)
             if severity == 'Warning':
                 warnings.append('⚠️ ' + first_line +
-                                alert_type + 'Warning' + second_line)
+                                alert_type + ' Warning' + second_line)
             if severity == 'Alert':
                 alerts.append('❗ ' + first_line + alert_type +
-                              'Alert' + second_line)
+                              ' Alert' + second_line)
     return severes, warnings, alerts
 
 

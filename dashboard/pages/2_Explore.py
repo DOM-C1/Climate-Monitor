@@ -272,7 +272,14 @@ def get_global_metric(_conn: connection, variable: str, metric: str,
     if metric in {'Most', 'Highest'}:
         info = get_current_weather_metric_loc(_conn, variable, 'max')
         location = info['Location'].values[0]
-        value = str(info[variable].values[0]) + ' ' + unit
+        if variable == 'precipitation_prob' and info[variable].values[0] == 0:
+            variable = 'uv_index'
+            metric = 'Highest'
+            title = ' UV-index '
+            unit = ''
+            info = get_current_weather_metric_loc(_conn, variable, 'max')
+            location = info['Location'].values[0]
+            value = str(info[variable].values[0])
     elif metric in {'Least', 'Lowest'}:
         info = get_current_weather_metric_loc(_conn, variable, 'min')
         location = info['Location'].values[0]
@@ -323,7 +330,7 @@ if __name__ == "__main__":
 
     st.markdown('## Air quality')
     st.altair_chart(alt.Chart(get_air_qualities(conn)).mark_line().encode(
-        x=alt.X('Report time:T', timeUnit='hoursminutes', title='Report time'),
+        x=alt.X('Report time:T'),
         y=alt.Y('O3 concentration:Q').scale(zero=False),
         color='Location',
         tooltip=['O3 concentration', 'Severity', 'Location']
